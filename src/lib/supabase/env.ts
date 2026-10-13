@@ -13,7 +13,11 @@ export const ENV_MISSING_MESSAGE =
 
 function clean(v: string | undefined) {
   if (!v) return undefined;
-  return v.replace(/[\s"'`\u200B-\u200D\uFEFF\u00A0]/g, "").replace(/[^\x21-\x7E]/g, "") || undefined;
+  return v
+    // Hífens "bonitos" que aparecem ao copiar de chat/documento viram hífen comum (a chave tem hífens).
+    .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, "-")
+    .replace(/[\s"'`\u200B-\u200D\uFEFF\u00A0]/g, "")
+    .replace(/[^\x21-\x7E]/g, "") || undefined;
 }
 
 /** Diagnóstico do valor cru (sem expor nada além do que já é público). */
