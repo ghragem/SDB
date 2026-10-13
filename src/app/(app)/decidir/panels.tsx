@@ -1,5 +1,6 @@
 "use client";
 
+import { Listen } from "@/components/listen";
 import { useActionState } from "react";
 import { Button, ErrorNote, Field, Input, Select, Textarea, cx } from "@/components/ui";
 import { Submit } from "@/components/submit";
@@ -106,7 +107,8 @@ export function AdversarialPanel({ id, aiConfigured, saved }: { id: string; aiCo
           <ListBlock title="Incertezas" items={r.uncertainties} />
           <ListBlock title="Riscos" items={r.risks} />
           <div className="rounded-lg bg-surface-2 p-3">
-            <p className="label">Veredito da IA · confiança {r.confidence}</p>
+            <div className="flex items-center justify-between gap-2"><p className="label">Veredito da IA · confiança {r.confidence}</p>
+              <Listen text={`Contra: ${r.against}. A favor: ${r.for}. Veredito: ${VERDICT_LABEL[r.verdict]}. ${r.recommendation}`} /></div>
             <p className="mt-1 font-medium">{VERDICT_LABEL[r.verdict]}</p>
             <p className="mt-1">{r.recommendation}</p>
           </div>

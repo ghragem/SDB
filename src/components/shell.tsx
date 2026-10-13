@@ -10,6 +10,7 @@ import { MOBILE_TABS, NAV, SECONDARY } from "./nav";
 import { cx } from "./ui";
 import { QuickCapture } from "./quick-capture";
 import { CommandPalette } from "./command-palette";
+import { OfflineSync } from "./offline-sync";
 
 const isActive = (path: string, href: string) => path === href || path.startsWith(href + "/");
 
@@ -152,6 +153,7 @@ export function Shell({ children, noticeCount, inboxCount, name, dayState }: {
       ) : null}
 
       <QuickCapture open={captureOpen} onClose={() => setCaptureOpen(false)} />
+      <OfflineSync />
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
     </div>
   );

@@ -26,11 +26,15 @@ export default async function BrainPage({ searchParams }: PageProps<"/brain">) {
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : "";
   const kind = typeof sp.tipo === "string" ? sp.tipo : "";
+  const one = typeof sp.nota === "string" && /^[0-9a-f-]{36}$/.test(sp.nota) ? sp.nota : null;
   const { supabase } = await requireUser();
   const ai = aiStatus();
 
   const [notes, hits, rules, projects] = await Promise.all([
-    (kind ? supabase.from("brain_notes").select("*").eq("kind", kind) : supabase.from("brain_notes").select("*")).order("created_at", { ascending: false }).limit(60),
+    // Conversas importadas são longas: ficam fora da lista geral e só aparecem no filtro "Conversa".
+    (one ? supabase.from("brain_notes").select("*").eq("id", one)
+      : kind ? supabase.from("brain_notes").select("*").eq("kind", kind) : supabase.from("brain_notes").select("*").neq("kind", "conversa"))
+      .order("created_at", { ascending: false }).limit(kind === "conversa" ? 25 : 60),
     q ? supabase.rpc("search_all", { q }) : Promise.resolve({ data: null }),
     supabase.from("reality_rules").select("id, rule, detail, origin").eq("status", "active").order("position"),
     supabase.from("projects").select("id, name").order("priority"),
@@ -38,7 +42,8 @@ export default async function BrainPage({ searchParams }: PageProps<"/brain">) {
 
   return (
     <>
-      <PageHeader title="Brain" subtitle="Decisões, erros, aprendizados e notas. Tudo pesquisável." />
+      <PageHeader title="Brain" subtitle="Decisões, erros, aprendizados e notas. Tudo pesquisável."
+        action={<a href="/importar" className="text-sm text-muted underline underline-offset-4 hover:text-ink">Importar conversas</a>} />
       <div className="space-y-9">
         <Section title="Pergunte ao seu histórico">
           {ai.configured ? (
@@ -132,7 +137,16 @@ export default async function BrainPage({ searchParams }: PageProps<"/brain">) {
                     </form>
                   </div>
                   {n.title ? <p className="mt-2 font-medium">{n.title}</p> : null}
-                  <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">{n.body}</p>
+                  {n.kind === "conversa" ? (
+                    <details className="mt-1" open={Boolean(one)}>
+                      <summary className="cursor-pointer text-sm text-muted">
+                        {n.source === "chatgpt" ? "ChatGPT" : n.source === "claude" ? "Claude" : "Colada"} · {(n.metadata as { messages?: number }).messages ?? "?"} mensagens · ver conversa
+                      </summary>
+                      <p className="mt-2 max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-[14px] leading-relaxed text-muted">{n.body}</p>
+                    </details>
+                  ) : (
+                    <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">{n.body}</p>
+                  )}
                   {n.url ? <a href={n.url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-sm text-muted underline underline-offset-4">{n.url}</a> : null}
                 </Card>
               ))}

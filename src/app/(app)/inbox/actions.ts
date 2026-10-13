@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { parseMoney, str, todaySP } from "@/lib/format";
 
-export type CaptureState = { ok?: boolean; error?: string; at?: number };
+export type CaptureState = { ok?: boolean; error?: string; at?: number; offline?: boolean };
 
 const KINDS = ["ideia","nota","audio","link","despesa","receita","erro","aprendizado","decisao","oportunidade","tarefa","foto","print","conversa"];
 

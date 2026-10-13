@@ -1,5 +1,5 @@
 import {
-  BookOpen, Briefcase, Home, Inbox, Library, Lightbulb, ListChecks, Mic, Scale, Settings, Wallet, Bell,
+  BookOpen, Briefcase, Download, Home, Inbox, Library, Lightbulb, ListChecks, Mic, Scale, Settings, Wallet, Bell,
   type LucideIcon,
 } from "lucide-react";
 
@@ -19,6 +19,7 @@ export const NAV: NavItem[] = [
 ];
 
 export const SECONDARY: NavItem[] = [
+  { href: "/importar", label: "Importar conversas", icon: Download },
   { href: "/notificacoes", label: "Notificações", icon: Bell },
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];

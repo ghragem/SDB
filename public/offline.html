@@ -3,22 +3,139 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sem conexão · Saindo do Bairro</title>
+<meta name="theme-color" content="#0a0a0b">
+<title>Sem internet · Saindo do Bairro</title>
 <style>
-  :root { --bg:#0a0a0b; --text:#f3f2ef; --muted:#a09d97; --accent:#e8302a; color-scheme:dark; }
-  body { margin:0; min-height:100dvh; display:grid; place-items:center; background:var(--bg); color:var(--text);
-         font:16px/1.5 -apple-system, "SF Pro Text", system-ui, sans-serif; padding:24px; box-sizing:border-box; }
-  main { max-width:340px; }
-  h1 { font-size:22px; margin:0 0 8px; letter-spacing:-0.01em; }
-  p { color:var(--muted); margin:0 0 20px; }
-  button { height:44px; padding:0 16px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; }
+  :root { --bg:#0a0a0b; --surface:#131315; --surface-2:#1b1b1e; --line:#26262a; --text:#f3f2ef; --muted:#a09d97; --faint:#6d6a65;
+          --accent:#e8302a; --ok:#3fbf7f; color-scheme:dark; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100dvh; background:var(--bg); color:var(--text);
+         font:16px/1.5 -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
+         padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 24px); }
+  main { max-width:440px; margin:0 auto; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:900; text-transform:uppercase; font-size:14px; letter-spacing:-.01em; margin-bottom:28px; }
+  .brand img { width:26px; height:26px; border-radius:7px; }
+  h1 { font-size:24px; line-height:1.2; margin:0 0 6px; letter-spacing:-.01em; }
+  p.sub { color:var(--muted); margin:0 0 20px; font-size:15px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .rec { display:flex; align-items:center; gap:16px; }
+  .mic { width:64px; height:64px; border-radius:50%; border:0; background:var(--accent); color:#fff; display:grid; place-items:center; flex-shrink:0;
+         box-shadow:0 8px 24px rgba(232,48,42,.35); }
+  .mic.on { animation:pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform:scale(.94); } }
+  .mic svg { width:26px; height:26px; }
+  .timer { font:14px ui-monospace, "SF Mono", Menlo, monospace; color:var(--muted); }
+  textarea { width:100%; min-height:110px; margin-top:14px; resize:vertical; border:1px solid var(--line); border-radius:10px; background:var(--bg);
+             color:var(--text); font:inherit; padding:10px 12px; }
+  textarea::placeholder { color:var(--faint); }
+  .row { display:flex; gap:8px; margin-top:12px; }
+  button.primary { flex:1; height:44px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; }
+  button.ghost { height:44px; padding:0 14px; border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--muted); font:inherit; }
+  button:disabled { opacity:.5; }
+  .note { font-size:13px; color:var(--muted); margin-top:10px; min-height:20px; }
+  .note.ok { color:var(--ok); }
+  .queue { margin-top:18px; font-size:14px; color:var(--muted); }
+  .queue b { color:var(--text); }
+  audio { width:100%; margin-top:12px; height:40px; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Sem conexão.</h1>
-  <p>Seus dados ficam no banco, não no aparelho. Quando a internet voltar, tudo continua de onde parou.</p>
-  <button onclick="location.reload()">Tentar novamente</button>
+  <div class="brand"><img src="/icon-192.png" alt="">Saindo do Bairro</div>
+  <h1>Sem internet.</h1>
+  <p class="sub">Fala ou escreve mesmo assim. Fica guardado neste aparelho e sobe sozinho para a Inbox quando a conexão voltar.</p>
+
+  <div class="card">
+    <div class="rec">
+      <button class="mic" id="mic" aria-label="Gravar áudio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg>
+      </button>
+      <div>
+        <div id="status">Toque para falar</div>
+        <div class="timer" id="timer">0:00 / 3:00</div>
+      </div>
+    </div>
+    <audio id="player" controls hidden></audio>
+    <textarea id="text" placeholder="Ou escreve: ideia, preocupação, gasto, o que aconteceu."></textarea>
+    <div class="row">
+      <button class="primary" id="save" disabled>Guardar no aparelho</button>
+      <button class="ghost" id="discard" hidden>Descartar áudio</button>
+    </div>
+    <div class="note" id="note" role="status"></div>
+  </div>
+
+  <div class="queue" id="queue"></div>
+  <div class="row"><button class="ghost" style="flex:1" onclick="location.href='/hoje'">Tentar abrir o app</button></div>
 </main>
+
+<script>
+// Mesmo esquema de src/lib/offline-queue.ts
+const DB = "sdb-offline", STORE = "queue", MAX = 180;
+const openDB = () => new Promise((res, rej) => {
+  const r = indexedDB.open(DB, 1);
+  r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(STORE)) r.result.createObjectStore(STORE, { keyPath: "id" }); };
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+});
+const run = async (mode, fn) => { const db = await openDB(); return new Promise((res, rej) => {
+  const t = db.transaction(STORE, mode); const q = fn(t.objectStore(STORE));
+  t.oncomplete = () => { db.close(); res(q.result); }; t.onerror = () => { db.close(); rej(t.error); };
+}); };
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+const $ = (id) => document.getElementById(id);
+const mic = $("mic"), statusEl = $("status"), timerEl = $("timer"), text = $("text"), save = $("save"),
+      discard = $("discard"), note = $("note"), player = $("player");
+let rec = null, chunks = [], blob = null, mime = "", started = 0, tick = null, duration = 0;
+
+const fmt = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+const pickMime = () => { if (typeof MediaRecorder === "undefined") return "";
+  for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"]) if (MediaRecorder.isTypeSupported(m)) return m; return ""; };
+const refresh = () => { save.disabled = !blob && !text.value.trim(); };
+
+async function showQueue() {
+  try {
+    const items = await run("readonly", (s) => s.count());
+    $("queue").innerHTML = items ? `<b>${items}</b> ${items === 1 ? "captura guardada" : "capturas guardadas"} neste aparelho, esperando internet.` : "";
+  } catch { $("queue").textContent = ""; }
+}
+
+mic.onclick = async () => {
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  if (!navigator.mediaDevices || typeof MediaRecorder === "undefined") { note.textContent = "Este navegador não grava áudio. Escreva abaixo."; return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mime = pickMime(); chunks = [];
+    rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    rec.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop()); clearInterval(tick); mic.classList.remove("on");
+      duration = Math.max(1, Math.round((Date.now() - started) / 1000));
+      blob = new Blob(chunks, { type: (rec.mimeType || mime || "audio/webm").split(";")[0] });
+      player.src = URL.createObjectURL(blob); player.hidden = false; discard.hidden = false;
+      statusEl.textContent = "Áudio pronto (" + fmt(duration) + ")"; refresh();
+    };
+    rec.start(); started = Date.now(); mic.classList.add("on"); statusEl.textContent = "Gravando… toque para parar";
+    tick = setInterval(() => { const s = Math.round((Date.now() - started) / 1000); timerEl.textContent = fmt(s) + " / 3:00"; if (s >= MAX) rec.stop(); }, 250);
+  } catch { note.textContent = "Sem permissão de microfone. Escreva abaixo."; }
+};
+
+discard.onclick = () => { blob = null; player.hidden = true; discard.hidden = true; statusEl.textContent = "Toque para falar"; timerEl.textContent = "0:00 / 3:00"; refresh(); };
+text.oninput = refresh;
+
+save.onclick = async () => {
+  save.disabled = true;
+  try {
+    await run("readwrite", (s) => s.put({ id: uuid(), kind: "nota", body: text.value.trim(), audio: blob, mime: blob ? blob.type : null,
+      durationSec: blob ? duration : null, createdAt: new Date().toISOString() }));
+    text.value = ""; discard.onclick();
+    note.className = "note ok"; note.textContent = "Guardado. Sobe para a Inbox quando a internet voltar e o app abrir.";
+    showQueue();
+  } catch { note.className = "note"; note.textContent = "Não consegui guardar no aparelho. Tente de novo."; refresh(); }
+};
+
+// Internet voltou: abre o app, que sincroniza a fila.
+window.addEventListener("online", () => { note.className = "note ok"; note.textContent = "Internet de volta. Abrindo o app…"; setTimeout(() => location.href = "/hoje", 800); });
+showQueue();
+</script>
 </body>
 </html>

@@ -18,6 +18,12 @@ export default async function InboxPage() {
   ]);
   const items = data ?? [];
   const ps = projects.data ?? [];
+  type Meta = { audio_path?: string | null; offline?: boolean; source?: string; conversation?: string; project_id?: string | null };
+  const meta = (it: { metadata: unknown }) => (it.metadata ?? {}) as Meta;
+  // Áudios (gravados sem internet) tocam direto da Inbox, por link temporário do Storage privado.
+  const paths = items.map((it) => meta(it).audio_path).filter((p): p is string => Boolean(p));
+  const signed = paths.length ? (await supabase.storage.from("audio").createSignedUrls(paths, 3600)).data ?? [] : [];
+  const audioUrl = new Map(signed.flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])));
 
   return (
     <>
@@ -32,9 +38,12 @@ export default async function InboxPage() {
                   <div className="flex items-center gap-2">
                     <Badge>{it.kind}</Badge>
                     {money ? <span className="text-sm font-semibold tabular-nums">{fmtMoney(Number(it.amount))}</span> : null}
+                    {meta(it).offline ? <Badge>sem internet</Badge> : null}
                     <span className="ml-auto text-xs text-faint">{fmtDay(it.created_at)}</span>
                   </div>
                   <p className="mt-2 whitespace-pre-wrap">{it.body}</p>
+                  {meta(it).audio_path && audioUrl.get(meta(it).audio_path!) ? <audio controls preload="none" src={audioUrl.get(meta(it).audio_path!)} className="mt-2 h-10 w-full" /> : null}
+                  {meta(it).source === "importacao" ? <p className="mt-1 text-xs text-faint">Da conversa importada “{meta(it).conversation}”</p> : null}
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
                     {money ? (
                       <form action={route} className="flex flex-wrap gap-2">
@@ -62,7 +71,7 @@ export default async function InboxPage() {
                           <form action={route} className="flex gap-2">
                             <input type="hidden" name="id" value={it.id} />
                             <input type="hidden" name="to" value="projeto" />
-                            <select name="project_id" required defaultValue="" className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" aria-label="Projeto">
+                            <select name="project_id" required defaultValue={meta(it).project_id ?? ""} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" aria-label="Projeto">
                               <option value="" disabled>Projeto…</option>
                               {ps.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>

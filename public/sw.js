@@ -1,6 +1,6 @@
-// Service worker mínimo: cache de assets estáticos e tela offline.
+// Service worker mínimo: cache de assets estáticos e tela offline (que também captura nota/áudio sem internet).
 // Páginas com dados pessoais nunca são guardadas em cache.
-const VERSION = "sdb-v1";
+const VERSION = "sdb-v2"; // muda a cada alteração do offline.html para o aparelho baixar a nova
 const OFFLINE = "/offline.html";
 
 self.addEventListener("install", (event) => {

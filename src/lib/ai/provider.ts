@@ -11,8 +11,10 @@ export type GenerateOptions = {
   maxTokens?: number;
 };
 
+export type ProviderName = "anthropic" | "openai" | "gemini";
+
 export interface AIProvider {
-  readonly name: "anthropic" | "openai";
+  readonly name: ProviderName;
   readonly model: string;
   generate(opts: GenerateOptions): Promise<string>;
   transcribe?(audio: Blob, filename: string): Promise<string>;

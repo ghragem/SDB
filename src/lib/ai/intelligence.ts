@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { daysSince, todaySP } from "../format";
 import type { SessionItem } from "../types";
 import { getProvider } from ".";
-import { AIError, generateJson, type AIProvider, type JsonSchema } from "./provider";
+import { AIError, generateJson, type AIProvider, type JsonSchema, type ProviderName } from "./provider";
 
 // ---------------------------------------------------------------------------
 // Intelligence Layer: um único núcleo com contexto persistente (seções 50–52, 84).
@@ -99,7 +99,7 @@ async function log(ctx: Ctx, p: AIProvider, task: string, input: string, output:
 
 async function realityLevel(ctx: Ctx) {
   const { data } = await ctx.supabase.from("preferences").select("reality_level, ai_provider").maybeSingle();
-  return { level: data?.reality_level ?? "muito_direto", prefer: (data?.ai_provider ?? null) as "anthropic" | "openai" | null };
+  return { level: data?.reality_level ?? "muito_direto", prefer: (data?.ai_provider ?? null) as ProviderName | null };
 }
 
 async function run<T>(ctx: Ctx, task: string, keys: string[], prompt: string, schema: JsonSchema): Promise<T | null> {
@@ -236,6 +236,43 @@ export async function askHistory(ctx: Ctx, question: string, hits: { kind: strin
     "pergunte_ao_historico",
     ["active_projects"],
     `Pergunta do Gustavo sobre o próprio histórico: "${question}"\n\nRegistros encontrados na busca:\n${material || "nenhum"}\n\nResponda só com base nesses registros, citando [n]. Se não houver base, diga que não há registro suficiente.`,
+    schema,
+  );
+}
+
+export type Extracted = { kind: "ideia" | "decisao" | "tarefa" | "erro" | "aprendizado" | "oportunidade" | "nota"; text: string; projeto: string | null };
+
+/** Importação: tira de uma conversa externa o que importa para o sistema. Vai para a Inbox, nunca direto. */
+export async function extractFromConversation(ctx: Ctx, title: string, userText: string) {
+  const schema: JsonSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["itens"],
+    properties: {
+      itens: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["kind", "text", "projeto"],
+          properties: {
+            kind: { type: "string", enum: ["ideia", "decisao", "tarefa", "erro", "aprendizado", "oportunidade", "nota"] },
+            text: str,
+            projeto: { type: ["string", "null"] },
+          },
+        },
+      },
+    },
+  };
+  return run<{ itens: Extracted[] }>(
+    ctx,
+    "importar_conversa",
+    ["active_projects", "ideas"],
+    `Conversa importada de outra IA, título "${title}". Abaixo, só o que o Gustavo escreveu nela.\n\n${userText}\n\n` +
+      "Extraia no máximo 8 itens que valem entrar no sistema: ideias, decisões tomadas ou pendentes, tarefas concretas, erros, aprendizados, oportunidades. " +
+      "Cada text em uma frase autossuficiente, em português, sem inventar nada que não esteja na conversa. " +
+      "Em projeto, o nome de um projeto ativo do contexto quando o item claramente pertence a ele; senão null. " +
+      "Se a conversa não tiver nada útil (ex.: dúvida pontual), devolva itens vazio.",
     schema,
   );
 }

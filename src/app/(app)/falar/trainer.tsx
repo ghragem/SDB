@@ -1,5 +1,6 @@
 "use client";
 
+import { Listen } from "@/components/listen";
 import { useActionState, useState } from "react";
 import { Recorder, type RecordingResult } from "@/components/recorder";
 import { Button, ErrorNote, Field, Input, Textarea } from "@/components/ui";
@@ -37,7 +38,10 @@ export function Trainer({ initialPrompt, previous }: { initialPrompt: string; pr
       {m ? (
         <div className="space-y-4 rounded-[10px] border border-line bg-surface p-4">
           {state.feedback ? (
-            <p className="text-3xl font-semibold tabular-nums">NOTA {state.feedback.nota.toFixed(1).replace(".", ",")}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-3xl font-semibold tabular-nums">NOTA {state.feedback.nota.toFixed(1).replace(".", ",")}</p>
+              <Listen text={`Nota ${state.feedback.nota.toFixed(1).replace(".", ",")}. Problemas: ${state.feedback.problemas.join(". ")}. O que funcionou: ${state.feedback.ponto_forte}. Próximo exercício: ${state.feedback.proximo_exercicio}`} />
+            </div>
           ) : null}
           <dl className="grid grid-cols-3 gap-3 text-sm">
             <div><dt className="text-muted">Duração</dt><dd className="font-semibold tabular-nums">{m.durationSec}s</dd></div>

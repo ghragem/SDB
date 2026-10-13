@@ -1,5 +1,6 @@
 "use client";
 
+import { Listen } from "@/components/listen";
 import { useActionState } from "react";
 import { Button, ErrorNote } from "@/components/ui";
 import { ask, type AskState } from "./actions";
@@ -19,7 +20,7 @@ export function AskHistory({ aiConfigured, q }: { aiConfigured: boolean; q: stri
       {state.error && aiConfigured ? <ErrorNote>{state.error}</ErrorNote> : null}
       {state.answer ? (
         <div className="rounded-lg bg-surface-2 p-3 text-[15px] leading-relaxed">
-          <p className="label mb-1">Resposta · confiança {state.confidence}</p>
+          <div className="mb-1 flex items-center justify-between gap-2"><p className="label">Resposta · confiança {state.confidence}</p><Listen text={state.answer} /></div>
           <p className="whitespace-pre-wrap">{state.answer}</p>
         </div>
       ) : null}

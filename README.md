@@ -21,7 +21,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://xjtwaodxxgkemkfpkjex.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_N2mn-L1Xx5Iq-VbgsM1zlQ_KrUQz3Qi
 ```
 
-A chave publicável é feita para ficar no navegador; quem protege os dados é o RLS. Chaves de IA ficam só no servidor (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`), nunca com prefixo `NEXT_PUBLIC_`, nunca no Git.
+A chave publicável é feita para ficar no navegador; quem protege os dados é o RLS. Chaves de IA ficam só no servidor (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY` ou `GEMINI_API_KEY`, que tem plano gratuito em aistudio.google.com; no plano gratuito o Google pode usar o conteúdo), nunca com prefixo `NEXT_PUBLIC_`, nunca no Git.
 
 Sem chave de IA o app funciona inteiro: leitura do dia e sessão saem do motor de regras e a interface diz isso. Com chave, a IA refina usando o contexto salvo no banco.
 
@@ -51,6 +51,9 @@ As migrações em `supabase/migrations/` já foram aplicadas no projeto.
 | Review | Diário (3 perguntas) e semanal (números da semana + continuar, parar, começar, prioridade). |
 | Notificações | Calculadas dos dados: projeto parado ≥ 5 dias, decisão a revisar, hipótese vencida, ideia sem avaliação, inbox pendente, revisão semanal. |
 | Ajustes | Nome, modo realidade, provider preferido, status real da IA e integrações (todas "EM BREVE"). |
+| Importar | Exportação do ChatGPT ou do Claude (.zip/.json) lida no aparelho; as conversas marcadas viram "conversa" no Brain, pesquisáveis, sem duplicar ao reimportar. Com IA, extrai ideias, decisões e tarefas para a Inbox (nada entra sem confirmação). Também aceita conversa colada. |
+| Offline | Sem internet, o app abre uma tela de captura (texto ou áudio) que guarda no aparelho (IndexedDB). O "+" também guarda quando a rede cai. Ao voltar a conexão, sobe sozinho para a Inbox; o áudio toca na Inbox. |
+| Ouvir | Botão "Ouvir" lê em voz alta a leitura do dia e as respostas da IA com a voz do próprio aparelho (sem custo). |
 | PWA | Manifest standalone, ícones, apple-touch-icon, safe areas, service worker com cache de assets e tela offline. Páginas com dados nunca vão para cache. |
 
 Busca global: `⌘K` / `Ctrl+K` no desktop, lupa no mobile.
@@ -110,6 +113,6 @@ O e-mail de confirmação usa o servidor de e-mail padrão do Supabase, que só 
 
 ## Backlog (visão completa no briefing)
 
-P0 restantes: notificações push, importação de conversa, gravação de áudio offline.
+P0 restantes: notificações push (precisa de chave VAPID e agendador).
 P1: Radar, Imóveis, Negócios, pesquisa externa, vídeos recomendados, FAC, Copy Lab, Sales Lab, Escrita avançada.
 P2: integrações (Calendar, Drive, Gmail, Ads, WhatsApp, financeiro, marketplaces).

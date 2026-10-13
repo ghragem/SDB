@@ -3,6 +3,8 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { capture, type CaptureState } from "@/app/(app)/inbox/actions";
+import { enqueue, offlineSupported } from "@/lib/offline-queue";
+import { parseMoney } from "@/lib/format";
 import { Button, ErrorNote, Input, Textarea, cx } from "./ui";
 
 const TYPES: [string, string][] = [
@@ -15,9 +17,25 @@ export function QuickCapture({ open, onClose }: { open: boolean; onClose: () => 
   const [kind, setKind] = useState("ideia");
   const formRef = useRef<HTMLFormElement>(null);
   const [state, action, pending] = useActionState<CaptureState, FormData>(async (prev, fd) => {
-    const r = await capture(prev, fd);
-    if (r.ok) { formRef.current?.reset(); onClose(); }
-    return r;
+    // Sem internet (ou se a chamada cair), guarda no aparelho e sobe sozinho quando a conexão voltar.
+    const queue = async (): Promise<CaptureState> => {
+      const body = String(fd.get("body") ?? "").trim();
+      if (!body) return { error: "Escreva alguma coisa antes de salvar." };
+      if (!offlineSupported()) return { error: "Sem internet e sem armazenamento local neste navegador." };
+      const amount = parseMoney(fd.get("amount"));
+      await enqueue({ kind: String(fd.get("kind") ?? "nota"), body, amount: amount && amount > 0 ? amount : null });
+      window.dispatchEvent(new Event("sdb:queued"));
+      formRef.current?.reset(); onClose();
+      return { ok: true, offline: true, at: Date.now() };
+    };
+    if (typeof navigator !== "undefined" && !navigator.onLine) return queue();
+    try {
+      const r = await capture(prev, fd);
+      if (r.ok) { formRef.current?.reset(); onClose(); }
+      return r;
+    } catch {
+      return queue();
+    }
   }, {});
 
   useEffect(() => {

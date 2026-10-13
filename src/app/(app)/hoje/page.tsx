@@ -1,3 +1,4 @@
+import { Listen } from "@/components/listen";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check, ChevronRight, Play } from "lucide-react";
@@ -87,7 +88,7 @@ export default async function HojePage() {
           {reading ? (
             <>
               <p className="text-[15.5px] leading-relaxed">{reading}</p>
-              <div className="mt-3"><SourceTag source={readingSource} /></div>
+              <div className="mt-3 flex items-center justify-between gap-2"><SourceTag source={readingSource} /><Listen text={reading} /></div>
             </>
           ) : (
             <p className="text-sm text-muted">Sai do seu check-in e dos seus projetos. Faça o check-in para ver a leitura de hoje.</p>

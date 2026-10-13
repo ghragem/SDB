@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/supabase/server";
-import { aiStatus } from "@/lib/ai";
+import { aiStatus, availableProviders } from "@/lib/ai";
+import type { ProviderName } from "@/lib/ai/provider";
 import { Badge, Button, Card, Field, Input, PageHeader, Section, Select } from "@/components/ui";
 import { Submit } from "@/components/submit";
 import { signOut } from "@/app/login/actions";
@@ -8,7 +9,7 @@ import { saveSettings } from "./actions";
 
 export const metadata: Metadata = { title: "Ajustes" };
 
-const INTEGRATIONS = ["Google Calendar", "Google Drive", "Gmail", "Meta Ads", "WhatsApp", "Gateways de pagamento", "Open Finance", "Marketplaces", "YouTube", "Importar conversa (ChatGPT/Claude)"];
+const INTEGRATIONS = ["Google Calendar", "Google Drive", "Gmail", "Meta Ads", "WhatsApp", "Gateways de pagamento", "Open Finance", "Marketplaces", "YouTube"];
 
 export default async function AjustesPage() {
   const { supabase, email } = await requireUser();
@@ -16,9 +17,8 @@ export default async function AjustesPage() {
     supabase.from("profiles").select("display_name").maybeSingle(),
     supabase.from("preferences").select("reality_level, ai_provider").maybeSingle(),
   ]);
-  const ai = aiStatus(prefs?.ai_provider as "anthropic" | "openai" | null);
-  const hasA = Boolean(process.env.ANTHROPIC_API_KEY);
-  const hasO = Boolean(process.env.OPENAI_API_KEY);
+  const ai = aiStatus(prefs?.ai_provider as ProviderName | null);
+  const has = availableProviders();
 
   return (
     <>
@@ -35,8 +35,9 @@ export default async function AjustesPage() {
             <Field label="Provider de IA preferido">
               <Select name="ai_provider" defaultValue={prefs?.ai_provider ?? ""}>
                 <option value="">Automático</option>
-                <option value="anthropic" disabled={!hasA}>Claude (Anthropic){hasA ? "" : " · sem chave"}</option>
-                <option value="openai" disabled={!hasO}>OpenAI{hasO ? "" : " · sem chave"}</option>
+                <option value="anthropic" disabled={!has.anthropic}>Claude (Anthropic){has.anthropic ? "" : " · sem chave"}</option>
+                <option value="openai" disabled={!has.openai}>OpenAI{has.openai ? "" : " · sem chave"}</option>
+                <option value="gemini" disabled={!has.gemini}>Gemini (Google, plano grátis){has.gemini ? "" : " · sem chave"}</option>
               </Select>
             </Field>
             <Submit>Salvar</Submit>
@@ -46,7 +47,7 @@ export default async function AjustesPage() {
         <Section title="Inteligência">
           <Card className="divide-y divide-line text-sm">
             <Row label="IA de texto" state={ai.configured ? "CONECTADO" : "NÃO CONECTADO"} detail={ai.configured ? `${ai.provider} · ${ai.model}` : "Sem chave no servidor. Leitura do dia e sessão funcionam por regras."} />
-            <Row label="Transcrição no servidor" state={ai.transcription ? "CONECTADO" : "NÃO CONECTADO"} detail={ai.transcription ? "OpenAI" : "Usando o reconhecimento de voz do navegador."} />
+            <Row label="Transcrição no servidor" state={ai.transcription ? "CONECTADO" : "NÃO CONECTADO"} detail={ai.transcription ? (has.openai ? "OpenAI" : "Gemini") : "Usando o reconhecimento de voz do navegador."} />
           </Card>
           <p className="text-xs text-faint">O contexto fica no banco do Saindo do Bairro. Os modelos só consultam. Trocar de provider não perde nada.</p>
         </Section>

@@ -11,7 +11,7 @@ export async function saveSettings(form: FormData) {
   await supabase.from("profiles").update({ display_name: str(form.get("display_name")) }).eq("user_id", userId);
   await supabase.from("preferences").update({
     reality_level: ["suave", "direto", "muito_direto"].includes(level) ? level : "muito_direto",
-    ai_provider: ["anthropic", "openai"].includes(provider) ? provider : null,
+    ai_provider: ["anthropic", "openai", "gemini"].includes(provider) ? provider : null,
   }).eq("user_id", userId);
   revalidatePath("/", "layout");
 }
