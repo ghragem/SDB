@@ -1,12 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { supabaseEnv } from "./env";
 
 export async function createClient() {
+  // Sem configuração, um endereço inválido: as chamadas falham e o login mostra o motivo.
+  const env = supabaseEnv() ?? { url: "http://supabase-nao-configurado.invalid", key: "ausente" };
   const cookieStore = await cookies();
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    env.url,
+    env.key,
     {
       cookies: {
         getAll() {

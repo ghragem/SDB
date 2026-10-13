@@ -1,8 +1,11 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { ENV_MISSING_MESSAGE, supabaseEnv } from "./env";
 
 export function createClient() {
+  const env = supabaseEnv();
+  if (!env) throw new Error(ENV_MISSING_MESSAGE);
   return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    env.url,
+    env.key,
   );
 }

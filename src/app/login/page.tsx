@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { LoginForm } from "./login-form";
 import { Wordmark } from "@/components/shell";
+import { ErrorNote } from "@/components/ui";
+import { ENV_MISSING_MESSAGE, supabaseEnv } from "@/lib/supabase/env";
 
 export const metadata: Metadata = { title: "Entrar" };
 
@@ -21,6 +23,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             Pensar melhor.<br />Decidir melhor.<br />Executar melhor.
           </h1>
         </div>
+        {!supabaseEnv() ? <div className="mb-4"><ErrorNote>{ENV_MISSING_MESSAGE}</ErrorNote></div> : null}
         <LoginForm notice={notice} />
       </div>
       <p className="mt-10 text-xs text-faint sm:text-center">Seus dados são privados e exigem login.</p>
