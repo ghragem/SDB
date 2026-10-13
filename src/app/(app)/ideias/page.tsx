@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/supabase/server";
 import { daysSince, fmtDay } from "@/lib/format";
+import { loadOperational } from "@/lib/operational";
 import { Badge, Card, Empty, PageHeader, Section } from "@/components/ui";
 import { Submit } from "@/components/submit";
 import { AnalyzeIdea } from "./analyze";
@@ -20,12 +21,14 @@ const STATUS_LABEL: Record<string, string> = { capturada: "Capturada", analisand
 export default async function IdeiasPage({ searchParams }: PageProps<"/ideias">) {
   const { aberta } = await searchParams;
   const { supabase } = await requireUser();
-  const [{ data }, active] = await Promise.all([
+  const [{ data }, op] = await Promise.all([
     supabase.from("ideas").select("*").order("created_at", { ascending: false }),
-    supabase.from("projects").select("name").in("status", ["construcao", "validacao", "operando", "escalando"]).order("priority").limit(1),
+    loadOperational(),
   ]);
   const ideas = data ?? [];
   const recent = ideas.filter((i) => (daysSince(i.created_at) ?? 99) <= 7).length;
+  const top = op.ranked[0] ?? null;
+  const dispersion = op.alerts.find((a) => a.key === "dispersao-ideias");
 
   return (
     <>
@@ -37,9 +40,16 @@ export default async function IdeiasPage({ searchParams }: PageProps<"/ideias">)
         <div className="flex justify-end"><Submit size="sm">Capturar</Submit></div>
       </form>
 
-      {recent >= 3 && active.data?.[0] ? (
+      {dispersion ? (
+        <p className="mb-6 border-l-2 border-accent pl-3 text-sm">{dispersion.text}</p>
+      ) : recent >= 3 && top ? (
         <p className="mb-6 border-l-2 border-accent pl-3 text-sm">
-          {recent} ideias nos últimos 7 dias. {active.data[0].name} continua sendo o projeto ativo. Você não precisa de outra ideia; precisa colocar a atual na rua.
+          {recent} ideias nos últimos 7 dias. {top.project.name} continua sendo a prioridade #1 (score {top.score}).
+        </p>
+      ) : null}
+      {top ? (
+        <p className="-mt-4 mb-6 text-[13px] text-muted">
+          Antes de promover qualquer ideia, diga por que ela merece passar na frente de <b className="text-ink">{top.project.name}</b>.
         </p>
       ) : null}
 

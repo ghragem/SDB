@@ -7,6 +7,9 @@ import { PROJECT_STATUS_LABEL, type Project } from "@/lib/types";
 import { Badge, Button, Card, Empty, LinkButton, Section, Select, cx } from "@/components/ui";
 import { Submit } from "@/components/submit";
 import { ProjectForm } from "../project-form";
+import { NextActionForm } from "@/components/next-action-form";
+import { loadOperational } from "@/lib/operational";
+import { actionQuality } from "@/lib/engine";
 import { addUpdate, deleteProject } from "../actions";
 
 export const metadata: Metadata = { title: "Projeto" };
@@ -29,6 +32,10 @@ export default async function ProjetoPage({ params }: PageProps<"/projetos/[id]"
   ]);
 
   const idle = daysSince(p.last_progress_at);
+  const op = await loadOperational();
+  const rank = op.ranked.findIndex((r) => r.project.id === p.id) + 1;
+  const scored = rank ? op.ranked[rank - 1] : null;
+  const quality = actionQuality(p.next_action);
   const t = tx.data ?? [];
   const revenue = t.filter((x) => x.type === "receita").reduce((a, x) => a + Number(x.amount), 0);
   const costBy = (cat: string) => t.filter((x) => x.type !== "receita" && x.category === cat).reduce((a, x) => a + Number(x.amount), 0);
@@ -47,6 +54,31 @@ export default async function ProjetoPage({ params }: PageProps<"/projetos/[id]"
         </div>
         {p.description ? <p className="mt-1 text-muted">{p.description}</p> : null}
       </div>
+
+      {/* Próxima ação obrigatória e o porquê do score */}
+      <Card id="proxima-acao" className="space-y-3 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="label">Próxima ação</p>
+          {scored ? <span className="text-xs tabular-nums text-muted">score {scored.score} · #{rank} entre os ativos</span> : null}
+        </div>
+        {quality.level !== "ok" ? <p className="text-sm text-accent">{quality.reason}</p> : null}
+        <NextActionForm projectId={p.id} current={p.next_action} />
+        {scored ? (
+          <details className="text-[13px]">
+            <summary className="cursor-pointer text-muted">Por que este score?</summary>
+            <div className="mt-2 font-mono">
+              {scored.factors.map((f) => (
+                <div key={f.label} className="flex justify-between gap-3 py-0.5">
+                  <span className="text-muted">{f.label}</span>
+                  <span className={cx("tabular-nums", f.points < 0 ? "text-accent" : f.points > 0 ? "text-ok" : "text-faint")}>{f.points > 0 ? `+${f.points}` : f.points}</span>
+                </div>
+              ))}
+              <div className="mt-1 flex justify-between border-t border-line pt-1.5 font-semibold"><span>Score final</span><span>{scored.score}</span></div>
+            </div>
+          </details>
+        ) : null}
+        {p.deadline ? <p className="text-[13px] text-muted">Prazo: {fmtDay(p.deadline)}</p> : null}
+      </Card>
 
       {/* Progresso real, sem porcentagem inventada (seção 27) */}
       <Card className="grid divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">

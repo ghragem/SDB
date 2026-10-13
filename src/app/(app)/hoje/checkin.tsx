@@ -75,11 +75,18 @@ export function Checkin({ transcriptionServer }: { transcriptionServer: boolean 
               placeholder="Ex.: hoje tô meio preocupado com dinheiro, pensei em mexer no AutoFlow, mas tive outra ideia também." />
           ) : null}
 
-          {mode === "rapido" ? (
-            <div className="space-y-3">
+          {/* Escalas em todos os modos: são elas que definem o modo do dia de forma objetiva. */}
+          {mode === "rapido" || mode === "escrever" || rec ? (
+            <div className="space-y-2.5 rounded-lg border border-line bg-bg p-3">
+              {mode !== "rapido" ? <p className="text-[12px] text-muted">Energia, foco e pressão (1 a 5). Sem elas, o modo do dia é estimado pelo texto.</p> : null}
               <Scale label="Energia" value={scales.energy} onChange={(v) => setScales((s) => ({ ...s, energy: v }))} />
               <Scale label="Foco" value={scales.focus} onChange={(v) => setScales((s) => ({ ...s, focus: v }))} />
               <Scale label="Pressão" value={scales.pressure} onChange={(v) => setScales((s) => ({ ...s, pressure: v }))} />
+            </div>
+          ) : null}
+
+          {mode === "rapido" ? (
+            <div className="space-y-3">
               <Input name="main_worry" placeholder="Preocupação principal (opcional)" />
               <Input name="text" placeholder="Prioridade, projeto ou dinheiro em uma linha (opcional)" />
             </div>

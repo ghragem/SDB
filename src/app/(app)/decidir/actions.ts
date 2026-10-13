@@ -167,3 +167,14 @@ export async function saveRealityCheck(form: FormData) {
   await supabase.from("brain_notes").insert({ user_id: userId, kind: "insight", title: "Eu estou viajando?", body, source: "reality_check", epistemic: "analise" });
   revalidatePath("/brain");
 }
+
+/** Fila de risco: lança quanto já foi gasto num experimento (soma vira % do limite). */
+export async function logSpend(form: FormData) {
+  const { supabase, userId } = await requireUser();
+  const id = String(form.get("experiment_id"));
+  const spent = parseMoney(form.get("spent"));
+  if (!spent || spent <= 0) return;
+  await supabase.from("experiment_results").insert({ user_id: userId, experiment_id: id, spent, note: str(form.get("note")) });
+  revalidatePath("/decidir");
+  revalidatePath("/hoje");
+}

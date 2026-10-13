@@ -10,6 +10,7 @@ export async function saveDaily(form: FormData) {
   await supabase.from("daily_reviews").upsert({
     user_id: userId, day,
     advanced: str(form.get("advanced")), wasted: str(form.get("wasted")), tomorrow: str(form.get("tomorrow")),
+    pending_decision: str(form.get("pending_decision")),
   }, { onConflict: "user_id,day" });
   await supabase.from("daily_sessions").update({ status: "encerrada" }).eq("day", day).eq("status", "aberta");
   revalidatePath("/review");

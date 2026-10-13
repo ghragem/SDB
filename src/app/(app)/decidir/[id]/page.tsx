@@ -80,9 +80,12 @@ export default async function DecisaoPage({ params }: PageProps<"/decidir/[id]">
         </Section>
       ) : null}
 
-      <Section title="Modo adversarial">
-        <Card className="p-4"><AdversarialPanel id={d.id} aiConfigured={ai.configured} saved={(d.metadata?.adversarial as Adversarial | undefined) ?? null} /></Card>
-      </Section>
+      {/* Recurso de IA: some quando não há IA, a não ser que já exista uma análise salva. */}
+      {ai.configured || d.metadata?.adversarial ? (
+        <Section title="Modo adversarial">
+          <Card className="p-4"><AdversarialPanel id={d.id} aiConfigured={ai.configured} saved={(d.metadata?.adversarial as Adversarial | undefined) ?? null} /></Card>
+        </Section>
+      ) : null}
 
       {d.verdict === "testar_pequeno" || experiments.data?.length ? (
         <Section title="Experimento">

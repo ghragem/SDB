@@ -24,6 +24,12 @@ export function ProjectForm({ project }: { project?: Project }) {
           </Select>
         </Field>
       </div>
+      <Field label="Próxima ação" hint="Passo concreto e executável. Ex.: Ligar para 3 oficinas e validar o fluxo de orçamento.">
+        <Input name="next_action" defaultValue={project?.next_action ?? ""} maxLength={300} />
+      </Field>
+      <Field label="Prazo" hint="Opcional. Prazo próximo pesa no score.">
+        <Input name="deadline" type="date" defaultValue={project?.deadline ?? ""} />
+      </Field>
       <Field label="Próxima prova" hint="Fato observável. Ex.: 1 oficina usando o cadastro de cliente por 7 dias.">
         <Input name="next_proof" defaultValue={project?.next_proof ?? ""} />
       </Field>

@@ -7,7 +7,7 @@ import { analyzeIdea, type IdeaState } from "./actions";
 type Idea = Record<string, string | null>;
 
 const QUESTIONS: [string, string][] = [
-  ["why_now", "1. Por que isso merece passar na frente?"],
+  ["why_now", "1. Por que isso merece passar na frente do projeto prioritário?"],
   ["project_losing_time", "2. Qual projeto perderá tempo?"],
   ["evidence", "3. Qual evidência existe? (fato, não sensação)"],
   ["test_cost", "4. Quanto custa testar?"],

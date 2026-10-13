@@ -17,6 +17,9 @@ export type Project = {
   hypotheses: string | null;
   risks: string | null;
   last_progress_at: string | null;
+  next_action: string | null;
+  next_action_at: string | null;
+  deadline: string | null;
   created_at: string;
 };
 

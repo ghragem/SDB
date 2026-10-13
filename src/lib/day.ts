@@ -2,6 +2,7 @@
 // Tudo que sai daqui é marcado como "regras" na interface.
 
 import { daysSince } from "./format";
+import { dayMode } from "./engine";
 import { LESSONS } from "./lessons";
 import { ACTIVE_STATUSES, type DayState, type Project, type SessionItem } from "./types";
 
@@ -44,14 +45,9 @@ export function readSignals(input: DayInput, projects: Project[]): Signals {
   };
 }
 
+/** Mesma regra objetiva da Hoje (engine.dayMode), para leitura e tela nunca discordarem. */
 export function computeDayState(input: DayInput, signals: Signals): DayState {
-  const { energy, focus, pressure } = input;
-  if (energy !== null && focus !== null) {
-    if (energy <= 2 || focus <= 2 || (pressure !== null && pressure >= 5 && energy <= 3)) return "sobrevivencia";
-    if (energy >= 4 && focus >= 4 && (pressure === null || pressure <= 3)) return "ataque";
-    return "normal";
-  }
-  return signals.tired ? "sobrevivencia" : "normal";
+  return dayMode(input.energy, input.focus, input.pressure, signals.tired).state;
 }
 
 const STATUS_WEIGHT: Record<string, number> = {
@@ -132,7 +128,8 @@ export function buildRulesDay(input: DayInput, ctx: DayContext) {
   const items: SessionItem[] = [];
   if (priority) {
     let detail: string;
-    if (priority.blocker) detail = `Atacar o bloqueio: ${priority.blocker}`;
+    if (priority.next_action) detail = `Próxima ação: ${priority.next_action}`;
+    else if (priority.blocker) detail = `Atacar o bloqueio: ${priority.blocker}`;
     else if (priority.next_proof) detail = `Avançar até a próxima prova: ${priority.next_proof}`;
     else detail = "Definir a próxima prova concreta deste projeto. Sem ela não dá para medir avanço.";
     items.push({ kind: "projeto", title: priority.name, detail, minutes: m.projeto, href: `/projetos/${priority.id}`, ref_id: priority.id });
