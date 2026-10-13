@@ -35,6 +35,7 @@ export function LoginForm({ notice }: { notice?: string }) {
         </Field>
         {notice && !state.error && !state.info ? <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">{notice}</p> : null}
         {state.error ? <ErrorNote>{state.error}</ErrorNote> : null}
+        {"detail" in state && state.detail ? <p className="break-all font-mono text-[11px] text-faint">Detalhe técnico: {state.detail}</p> : null}
         {state.info ? <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">{state.info}</p> : null}
         <Button type="submit" variant="primary" className="w-full" disabled={pending}>
           {pending ? "Aguarde…" : mode === "entrar" ? "Entrar" : "Criar conta"}
