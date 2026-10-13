@@ -130,14 +130,17 @@ test("próximas ações: no máximo 3; sobrevivência reduz escopo", () => {
   const a = proj({ id: "a", name: "AutoFlow", priority: 1, next_action: "Ligar para 3 oficinas hoje", last_progress_at: "2026-10-19T12:00:00Z" });
   const b = proj({ id: "b", name: "R4DAR", priority: 2, next_action: "Cadastrar 10 anúncios de iPhone", last_progress_at: "2026-10-19T12:00:00Z" });
   const ranked = rankProjects([a, b], new Map(), TODAY, "normal");
-  const normal = nextActions({ state: "normal", ranked, progressedToday: new Set(["a"]), carriedFromYesterday: null, decisions: [], risks: [], reviewDone: false });
+  const normal = nextActions({ state: "normal", ranked, progressedToday: new Map([["a", "2026-10-20T15:00:00.000Z"]]), carriedFromYesterday: null, decisions: [], risks: [], reviewDone: false });
   assert.equal(normal.length, 3);
   assert.equal(normal[0].done, true);
+  // avanço registrado ANTES de a ação existir não conta como feito
+  const antes = nextActions({ state: "normal", ranked: rankProjects([{ ...a, next_action_at: "2026-10-20T16:00:00.000Z" }, b], new Map(), TODAY, "normal"), progressedToday: new Map([["a", "2026-10-20T15:00:00.000Z"]]), carriedFromYesterday: null, decisions: [], risks: [], reviewDone: false });
+  assert.equal(antes[0].done, false);
   assert.equal(normal[2].key, "revisao");
-  const surv = nextActions({ state: "sobrevivencia", ranked: rankProjects([a, b], new Map(), TODAY, "sobrevivencia"), progressedToday: new Set(), carriedFromYesterday: null, decisions: [], risks: [], reviewDone: false });
+  const surv = nextActions({ state: "sobrevivencia", ranked: rankProjects([a, b], new Map(), TODAY, "sobrevivencia"), progressedToday: new Map(), carriedFromYesterday: null, decisions: [], risks: [], reviewDone: false });
   assert.deepEqual(surv.map((x) => x.key), ["acao-a", "revisao"]);
   assert.match(surv[0].label, /^5 minutos em AutoFlow/);
-  const semAcao = nextActions({ state: "normal", ranked: rankProjects([{ ...a, next_action: null }], new Map(), TODAY, "normal"), progressedToday: new Set(), carriedFromYesterday: "Mandar orçamento às 9h", decisions: [], risks: [], reviewDone: true });
+  const semAcao = nextActions({ state: "normal", ranked: rankProjects([{ ...a, next_action: null }], new Map(), TODAY, "normal"), progressedToday: new Map(), carriedFromYesterday: "Mandar orçamento às 9h", decisions: [], risks: [], reviewDone: true });
   assert.equal(semAcao[0].label, "Mandar orçamento às 9h");
   assert.ok(semAcao[1].define);
   assert.equal(semAcao.length, 3);

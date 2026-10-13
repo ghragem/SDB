@@ -41,7 +41,10 @@ export default async function ReviewPage() {
             <Field label="4. Qual é a primeira ação de amanhã?" hint="Aparece amanhã como ação nº 1 na Hoje.">
               <Input name="tomorrow" defaultValue={r?.tomorrow ?? ""} maxLength={200} placeholder="Ex.: Mandar o orçamento para a oficina do Zé às 9h." />
             </Field>
-            <Submit>{r ? "Atualizar revisão" : "Encerrar o dia"}</Submit>
+            <div className="flex flex-wrap items-center gap-3">
+              <Submit>{r ? "Atualizar revisão" : "Encerrar o dia"}</Submit>
+              {r ? <span role="status" className="text-[13px] text-ok">Revisão salva às {new Date(r.updated_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}.</span> : null}
+            </div>
           </form>
         </Card>
 

@@ -30,13 +30,15 @@ export const loadOperational = cache(async () => {
     supabase.from("daily_reviews").select("tomorrow").eq("day", addDays(today, -1)).maybeSingle(),
   ]);
 
-  const all = (projects.data ?? []) as (Project & ScoreProject)[];
+  const all = ((projects.data ?? []) as (Project & ScoreProject)[])
+    .map((p) => ({ ...p, next_action_at: p.next_action_at ? new Date(p.next_action_at).toISOString() : null }));
   const facts = new Map<string, ProjectFacts>();
   const fact = (id: string) => facts.get(id) ?? (facts.set(id, { progressCount: 0, revenue90: 0, spent90: 0 }), facts.get(id)!);
-  const progressedToday = new Set<string>();
+  const progressedToday = new Map<string, string>();
   for (const u of updates.data ?? []) {
     fact(u.project_id).progressCount++;
-    if (u.created_at >= startOfToday) progressedToday.add(u.project_id);
+    const at = new Date(u.created_at).toISOString();
+    if (at >= startOfToday && at > (progressedToday.get(u.project_id) ?? "")) progressedToday.set(u.project_id, at);
   }
   for (const t of tx.data ?? []) {
     if (t.type === "receita") fact(t.project_id).revenue90 += Number(t.amount);

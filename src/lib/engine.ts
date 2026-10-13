@@ -84,6 +84,7 @@ export type ScoreProject = {
   next_proof: string | null;
   blocker: string | null;
   deadline: string | null;       // YYYY-MM-DD
+  next_action_at?: string | null;
   last_progress_at: string | null;
   created_at: string;
 };
@@ -293,7 +294,7 @@ export type NextAction = { key: string; label: string; detail: string | null; hr
 export type ActionsInput = {
   state: DayState | null;
   ranked: Scored[];
-  progressedToday: Set<string>;          // projetos com avanço registrado hoje
+  progressedToday: Map<string, string>;  // projeto → horário do último avanço registrado hoje
   carriedFromYesterday: string | null;   // "primeira ação de amanhã" da revisão de ontem
   decisions: QueuedDecision[];
   risks: RiskRow[];
@@ -302,6 +303,11 @@ export type ActionsInput = {
 
 export function nextActions(i: ActionsInput): NextAction[] {
   const out: NextAction[] = [];
+  // Feita = avanço registrado hoje DEPOIS de a ação ser definida (avanço anterior não conta).
+  const doneFor = (p: ScoreProject) => {
+    const at = i.progressedToday.get(p.id);
+    return Boolean(at && (!p.next_action_at || at > p.next_action_at));
+  };
   const top = i.ranked[0];
   const survival = i.state === "sobrevivencia";
 
@@ -317,7 +323,7 @@ export function nextActions(i: ActionsInput): NextAction[] {
       out.push({ key: `acao-${p.id}`,
         label: survival ? `5 minutos em ${p.name}: ${p.next_action}` : `${p.name}: ${p.next_action}`,
         detail: survival ? "Ação pequena só para manter o movimento. Registre o avanço e pare." : top.action.level === "vaga" ? "Está vaga. Reescreva concreta antes de começar." : null,
-        href: `/projetos/${p.id}`, done: i.progressedToday.has(p.id) });
+        href: `/projetos/${p.id}`, done: doneFor(p) });
     }
   }
 
@@ -328,7 +334,7 @@ export function nextActions(i: ActionsInput): NextAction[] {
     else if (dec) out.push({ key: `dec-${dec.d.id}`, label: `Decidir: ${dec.d.title}`, detail: dec.reason, href: `/decidir/${dec.d.id}`, done: false });
     const second = i.ranked[1];
     if (second && second.action.level === "ok") {
-      out.push({ key: `acao-${second.project.id}`, label: `${second.project.name}: ${second.project.next_action}`, detail: `#2 na fila (score ${second.score}).`, href: `/projetos/${second.project.id}`, done: i.progressedToday.has(second.project.id) });
+      out.push({ key: `acao-${second.project.id}`, label: `${second.project.name}: ${second.project.next_action}`, detail: `#2 na fila (score ${second.score}).`, href: `/projetos/${second.project.id}`, done: doneFor(second.project) });
     }
   }
 

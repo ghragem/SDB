@@ -87,8 +87,8 @@ export default async function ProjetosPage() {
           <Section title="Como o score é calculado">
             <Card id="como-calcula" className="divide-y divide-line text-sm">
               {SCORE_RULES.map(([k, v]) => (
-                <div key={k} className="flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:justify-between sm:gap-4">
-                  <span>{k}</span><span className="text-muted sm:text-right">{v}</span>
+                <div key={k} className="flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:gap-6">
+                  <span className="sm:w-52 sm:shrink-0">{k}</span><span className="text-muted">{v}</span>
                 </div>
               ))}
             </Card>

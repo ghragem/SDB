@@ -23,7 +23,8 @@ const MODE_RULE: Record<DayState, string> = {
 };
 
 // Hoje responde uma pergunta: o que eu faço agora? Modo do dia, prioridade #1, 3 ações, 1 alerta.
-export default async function HojePage() {
+export default async function HojePage({ searchParams }: PageProps<"/hoje">) {
+  const refazer = (await searchParams).refazer === "1";
   const { supabase } = await requireUser();
   const [op, profile] = await Promise.all([
     loadOperational(),
@@ -67,7 +68,7 @@ export default async function HojePage() {
                 ) : null}
               </div>
             </div>
-            <a href="#refazer-checkin" className="shrink-0 text-[13px] text-muted underline underline-offset-4">Refazer check-in</a>
+            <Link href="/hoje?refazer=1#refazer-checkin" scroll={false} className="shrink-0 text-[13px] text-muted underline underline-offset-4">Refazer check-in</Link>
           </div>
         ) : (
           <div className="p-4">
@@ -187,7 +188,7 @@ export default async function HojePage() {
       </div>
 
       {op.checkin ? (
-        <details id="refazer-checkin" className="rounded-2xl border border-line bg-surface">
+        <details id="refazer-checkin" open={refazer} className="scroll-mt-20 rounded-2xl border border-line bg-surface">
           <summary className="cursor-pointer px-4 py-3 text-sm text-muted">Refazer check-in de hoje</summary>
           <div className="px-4 pb-4"><Checkin transcriptionServer={ai.transcription} /></div>
         </details>
