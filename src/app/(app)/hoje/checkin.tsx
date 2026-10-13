@@ -13,7 +13,13 @@ export function Checkin({ transcriptionServer }: { transcriptionServer: boolean 
   const [rec, setRec] = useState<RecordingResult | null>(null);
   const [text, setText] = useState("");
   const [scales, setScales] = useState<{ energy: number | null; focus: number | null; pressure: number | null }>({ energy: null, focus: null, pressure: null });
-  const [state, action, pending] = useActionState<CheckinState, FormData>(submitCheckin, {});
+  // Depois de salvar, limpa o formulário: com a gravação ainda na tela parecia que nada tinha sido salvo
+  // e o check-in acabava registrado duas vezes.
+  const [state, action, pending] = useActionState<CheckinState, FormData>(async (prev, form) => {
+    const r = await submitCheckin(prev, form);
+    if (r.ok) { setRec(null); setText(""); setScales({ energy: null, focus: null, pressure: null }); }
+    return r;
+  }, {});
 
   const modes: { k: Mode; label: string; icon: typeof Mic }[] = [
     { k: "falar", label: "Áudio", icon: Mic },
@@ -87,6 +93,7 @@ export function Checkin({ transcriptionServer }: { transcriptionServer: boolean 
           ) : null}
         </form>
       ) : null}
+      {state.ok && !pending ? <p className="mt-2 text-sm text-ok" role="status">Check-in registrado. A leitura e a sessão do dia foram atualizadas.</p> : null}
       {state.ok && state.aiError ? <p className="mt-2 text-xs text-faint">IA indisponível agora ({state.aiError}). Leitura feita por regras.</p> : null}
     </div>
   );

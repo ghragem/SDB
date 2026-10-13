@@ -48,6 +48,10 @@ export default async function HojePage() {
   const allProjects = (projects.data ?? []) as Project[];
   const active = allProjects.filter((p) => ACTIVE_STATUSES.includes(p.status));
   const priority = pickPriorityProject(allProjects);
+  const lastUpdate = priority
+    ? (await supabase.from("project_updates").select("body, created_at").eq("project_id", priority.id).eq("is_progress", true)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle()).data
+    : null;
   const tx = money.data ?? [];
   const sum = (t: string) => tx.filter((x) => x.type === t).reduce((a, x) => a + Number(x.amount), 0);
   const result = sum("receita") - sum("despesa") - sum("investimento");
@@ -148,7 +152,7 @@ export default async function HojePage() {
               </div>
               <dl className="mt-4 space-y-3 text-sm">
                 <div><dt className="text-[12px] text-muted">Próxima prova</dt><dd className="mt-0.5">{priority.next_proof ?? <span className="text-accent">Não definida</span>}</dd></div>
-                <div><dt className="text-[12px] text-accent">Último avanço</dt><dd className="mt-0.5"><IdleText days={daysSince(priority.last_progress_at)} /></dd></div>
+                <div><dt className="text-[12px] text-accent">Último avanço</dt><dd className="mt-0.5"><IdleText days={daysSince(priority.last_progress_at)} />{lastUpdate ? <span className="text-muted"> · {lastUpdate.body}</span> : null}</dd></div>
                 <div><dt className="text-[12px] text-accent">Bloqueio atual</dt><dd className="mt-0.5">{priority.blocker ?? <span className="text-muted">Nenhum registrado</span>}</dd></div>
               </dl>
               <form action={logProgress} className="mt-4 flex gap-2">

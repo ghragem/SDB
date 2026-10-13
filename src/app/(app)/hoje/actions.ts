@@ -29,6 +29,13 @@ export async function submitCheckin(_: CheckinState, form: FormData): Promise<Ch
   }
   if (mode !== "rapido" && !input.text) return { error: mode === "falar" ? "A transcrição está vazia. Grave de novo ou escreva." : "Escreva como você está chegando." };
 
+  // O mesmo áudio não vira dois check-ins (clique repetido no botão).
+  const audioPath = str(form.get("audio_path"));
+  if (audioPath) {
+    const { data: dup } = await supabase.from("daily_checkins").select("id").eq("audio_path", audioPath).limit(1).maybeSingle();
+    if (dup) return { ok: true };
+  }
+
   const { data: checkin, error } = await supabase.from("daily_checkins").insert({
     user_id: userId,
     day: todaySP(),
@@ -38,7 +45,7 @@ export async function submitCheckin(_: CheckinState, form: FormData): Promise<Ch
     pressure: input.pressure,
     main_worry: input.mainWorry,
     raw_text: input.text,
-    audio_path: str(form.get("audio_path")),
+    audio_path: audioPath,
     metadata: { transcript_source: str(form.get("transcript_source")), duration_sec: Number(form.get("duration_sec")) || null },
   }).select("id").single();
   if (error || !checkin) return { error: "Não consegui salvar seu check-in. Tente de novo." };
