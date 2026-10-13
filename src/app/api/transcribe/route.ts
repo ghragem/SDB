@@ -10,7 +10,8 @@ export async function POST(request: NextRequest) {
   if (!data?.claims?.sub) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const t = getTranscriber();
-  if (!t?.transcribe) return NextResponse.json({ error: "transcricao_nao_configurada" }, { status: 501 });
+  // Sem provedor configurado não é erro: o app pede o texto ao usuário.
+  if (!t?.transcribe) return NextResponse.json({ text: null, reason: "transcricao_nao_configurada" });
 
   const form = await request.formData().catch(() => null);
   const audio = form?.get("audio");

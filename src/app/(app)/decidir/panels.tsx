@@ -19,7 +19,7 @@ export function VerdictForm({ id, suggested, current }: { id: string; suggested:
         {Object.entries(VERDICT_LABEL).map(([k, l]) => (
           <label key={k} className="relative">
             <input type="radio" name="verdict" value={k} defaultChecked={(current.verdict ?? suggested.verdict) === k} className="peer sr-only" />
-            <span className="flex h-10 items-center justify-center rounded-lg border border-line px-2 text-center text-[13px] text-muted peer-checked:border-ink peer-checked:bg-ink peer-checked:text-bg peer-focus-visible:outline-2 peer-focus-visible:outline-accent">{l}</span>
+            <span className="flex h-10 items-center justify-center rounded-lg border border-line px-2 text-center text-[13px] text-muted peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:outline-2 peer-focus-visible:outline-accent">{l}</span>
           </label>
         ))}
       </div>

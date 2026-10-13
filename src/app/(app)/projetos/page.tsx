@@ -64,7 +64,7 @@ function List({ projects, result, hasFin, muted }: { projects: Project[]; result
             </div>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted">
               <span>Próxima prova: {p.next_proof ?? <span className="text-accent">não definida</span>}</span>
-              <span className={cx(idle !== null && idle >= 5 && "text-accent")}>{idle === null ? "sem avanço registrado" : `${idle}d sem avanço`}</span>
+              <span className={cx(idle !== null && idle >= 5 && "text-accent")}>{idle === null ? "sem avanço registrado" : idle === 0 ? "avançou hoje" : `${idle}d sem avanço`}</span>
               {p.blocker ? <span>Bloqueio: {p.blocker}</span> : null}
               {hasFin(p.id) ? <span className="tabular-nums">Resultado: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(result(p.id))}</span> : null}
             </div>

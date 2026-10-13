@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: { default: "Saindo do Bairro", template: "%s · Saindo do Bairro" },
   description: "Pensar melhor. Decidir melhor. Executar melhor.",
   applicationName: "Saindo do Bairro",
-  appleWebApp: { capable: true, title: "Saindo do Bairro", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Saindo do Bairro", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },
   robots: { index: false, follow: false },
 };
@@ -19,10 +19,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f5f2" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d0d0e" },
-  ],
+  themeColor: "#0a0a0b",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

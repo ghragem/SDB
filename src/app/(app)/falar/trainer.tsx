@@ -23,7 +23,7 @@ export function Trainer({ initialPrompt, previous }: { initialPrompt: string; pr
           <input type="hidden" name="duration_sec" value={rec.durationSec} />
           <input type="hidden" name="audio_path" value={rec.audioPath ?? ""} />
           {rec.audioUrl ? <audio controls src={rec.audioUrl} className="h-10 w-full" /> : null}
-          <Field label="Transcrição" hint={rec.transcriptSource === "nenhuma" ? "Este navegador não transcreveu. Sem texto, só dá para ouvir o playback." : "Corrija só erros de reconhecimento. Não melhore o que você falou."}>
+          <Field label="Transcrição" hint={rec.transcriptSource === "nenhuma" ? "Este navegador não transcreveu. Ouça e escreva exatamente o que você falou, com os vícios, para as métricas valerem." : "Corrija só erros de reconhecimento. Não melhore o que você falou."}>
             <Textarea name="transcript" rows={5} value={text} onChange={(e) => setText(e.target.value)} />
           </Field>
           {state.error ? <ErrorNote>{state.error}</ErrorNote> : null}

@@ -1,41 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f6f5f2;
-  --surface: #ffffff;
-  --surface-2: #efede8;
-  --border: #e3e0d9;
-  --border-strong: #cfcbc2;
-  --text: #141413;
-  --muted: #6b6862;
-  --faint: #9b978f;
-  --accent: #b3261e;
-  --accent-hover: #9a1f18;
-  --accent-soft: #f6e4e1;
+  /* Identidade: grafite quase preto, vermelho vivo como único acento (mockup aprovado) */
+  --bg: #0a0a0b;
+  --surface: #131315;
+  --surface-2: #1b1b1e;
+  --border: #242428;
+  --border-strong: #34343a;
+  --text: #f3f2ef;
+  --muted: #a09d97;
+  --faint: #6f6c67;
+  --accent: #e8302a;
+  --accent-hover: #f2433d;
+  --accent-soft: #2a1210;
   --accent-fg: #ffffff;
-  --ok: #2f6f4f;
-  --warn: #9a6a00;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d0d0e;
-    --surface: #151517;
-    --surface-2: #1d1d20;
-    --border: #28282c;
-    --border-strong: #3a3a40;
-    --text: #ecebe8;
-    --muted: #9b9891;
-    --faint: #6d6a65;
-    --accent: #e0483c;
-    --accent-hover: #ea5c51;
-    --accent-soft: #2a1513;
-    --accent-fg: #ffffff;
-    --ok: #5fb38a;
-    --warn: #d9a43a;
-    color-scheme: dark;
-  }
+  --ok: #3fbf7f;
+  --warn: #e0a23a;
+  --info: #4b8df0;
+  --violet: #8b6cf0;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -53,9 +36,17 @@
   --color-accent-fg: var(--accent-fg);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
+  --color-info: var(--info);
+  --color-violet: var(--violet);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --radius-card: 10px;
+}
+
+html {
+  /* âncoras e foco não ficam escondidos atrás do header e da barra inferior */
+  scroll-padding-top: 72px;
+  scroll-padding-bottom: 96px;
 }
 
 html,
@@ -92,6 +83,10 @@ select {
 }
 .pt-safe {
   padding-top: env(safe-area-inset-top);
+}
+/* telas sem header (login, onboarding): respiro + área do relógio no iPhone */
+.pt-page {
+  padding-top: calc(env(safe-area-inset-top) + 2.5rem);
 }
 
 .label {

@@ -47,7 +47,7 @@ export default async function InboxPage() {
                           <option value="">Sem projeto</option>
                           {ps.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
-                        <button className="h-9 rounded-lg bg-ink px-3 text-sm font-medium text-bg">Lançar em Dinheiro</button>
+                        <button className="h-9 rounded-lg bg-accent px-3 text-sm font-medium text-accent-fg">Lançar em Dinheiro</button>
                       </form>
                     ) : (
                       <>

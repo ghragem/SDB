@@ -1,26 +1,21 @@
-// Gera os ícones PWA a partir de um SVG. Uso: node scripts/icons.mjs
+// Gera os ícones do app a partir da arte oficial (assets/icone-app.png). Uso: node scripts/icons.mjs
 import sharp from "sharp";
-import { writeFileSync } from "node:fs";
 
-// Um quadrado aberto (o bairro) e um bloco vermelho saindo pela abertura.
-const svg = (pad) => `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#141413"/>
-  <g transform="translate(${pad} ${pad}) scale(${(512 - 2 * pad) / 512})">
-    <path d="M330 150 H150 V362 H330" fill="none" stroke="#ecebe8" stroke-width="34" stroke-linecap="square"/>
-    <rect x="300" y="222" width="68" height="68" fill="#e0483c"/>
-  </g>
-</svg>`;
+const SRC = "assets/icone-app.png";
+// Recorta o quadrado do ícone sem a moldura preta e sem a borda clara do tile.
+const tile = () => sharp(SRC).extract({ left: 84, top: 84, width: 1086, height: 1086 });
 
-const out = [
-  ["public/icon-192.png", 192, 40],
-  ["public/icon-512.png", 512, 40],
-  ["public/icon-maskable.png", 512, 110],
-  ["src/app/apple-icon.png", 180, 40],
-  ["src/app/icon.png", 64, 20],
+const square = [
+  ["public/icon-192.png", 192],
+  ["public/icon-512.png", 512],
+  ["src/app/apple-icon.png", 180],
+  ["src/app/icon.png", 64],
+  ["public/logo-mark.png", 96],
 ];
-for (const [file, size, pad] of out) {
-  await sharp(Buffer.from(svg(pad))).resize(size, size).png().toFile(file);
-}
-writeFileSync("public/icon.svg", svg(40).trim());
+for (const [file, size] of square) await tile().resize(size, size).png().toFile(file);
+
+// Maskable: arte dentro da zona segura (80%) sobre o fundo do app.
+const inner = await tile().resize(410, 410).png().toBuffer();
+await sharp({ create: { width: 512, height: 512, channels: 4, background: "#0a0a0b" } })
+  .composite([{ input: inner, gravity: "center" }]).png().toFile("public/icon-maskable.png");
 console.log("ok");

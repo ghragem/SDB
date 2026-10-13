@@ -45,7 +45,7 @@ export function QuickCapture({ open, onClose }: { open: boolean; onClose: () => 
         <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
           {TYPES.map(([k, label]) => (
             <button type="button" key={k} onClick={() => setKind(k)} aria-pressed={kind === k}
-              className={cx("h-8 shrink-0 rounded-full border px-3 text-[13px]", kind === k ? "border-ink bg-ink text-bg" : "border-line text-muted")}>
+              className={cx("h-8 shrink-0 rounded-full border px-3 text-[13px]", kind === k ? "border-accent bg-accent text-accent-fg" : "border-line text-muted")}>
               {label}
             </button>
           ))}

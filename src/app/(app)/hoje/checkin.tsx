@@ -9,26 +9,26 @@ import { submitCheckin, type CheckinState } from "./actions";
 type Mode = "falar" | "escrever" | "rapido";
 
 export function Checkin({ transcriptionServer }: { transcriptionServer: boolean }) {
-  const [mode, setMode] = useState<Mode | null>(null);
+  const [mode, setMode] = useState<Mode>("falar");
   const [rec, setRec] = useState<RecordingResult | null>(null);
   const [text, setText] = useState("");
   const [scales, setScales] = useState<{ energy: number | null; focus: number | null; pressure: number | null }>({ energy: null, focus: null, pressure: null });
   const [state, action, pending] = useActionState<CheckinState, FormData>(submitCheckin, {});
 
   const modes: { k: Mode; label: string; icon: typeof Mic }[] = [
-    { k: "falar", label: "Falar", icon: Mic },
-    { k: "escrever", label: "Escrever", icon: Keyboard },
+    { k: "falar", label: "Áudio", icon: Mic },
+    { k: "escrever", label: "Texto", icon: Keyboard },
     { k: "rapido", label: "Rápido", icon: Zap },
   ];
 
   return (
     <div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1 rounded-lg bg-surface-2 p-1" role="tablist" aria-label="Modo do check-in">
         {modes.map(({ k, label, icon: Icon }) => (
-          <button key={k} type="button" onClick={() => { setMode(mode === k ? null : k); setRec(null); }} aria-pressed={mode === k}
-            className={cx("flex h-14 flex-col items-center justify-center gap-1 rounded-xl border text-[13px] font-medium transition-colors",
-              mode === k ? "border-ink bg-ink text-bg" : "border-line bg-surface text-ink hover:border-line-strong")}>
-            <Icon size={17} /> {label}
+          <button key={k} type="button" role="tab" onClick={() => { setMode(k); setRec(null); }} aria-selected={mode === k}
+            className={cx("flex h-9 items-center justify-center gap-1.5 rounded-md text-[13px] font-medium transition-colors",
+              mode === k ? "bg-accent text-accent-fg" : "text-muted hover:text-ink")}>
+            <Icon size={14} /> {label}
           </button>
         ))}
       </div>
@@ -58,7 +58,7 @@ export function Checkin({ transcriptionServer }: { transcriptionServer: boolean 
               </div>
             ) : (
               <>
-                <Recorder onDone={(r) => { setRec(r); setText(r.transcript); }} />
+                <Recorder maxSec={60} label="Fale por 1 minuto" onDone={(r) => { setRec(r); setText(r.transcript); }} />
                 <p className="text-xs text-faint">Fale por 30 a 60 segundos: como está chegando, o que preocupa, o que pensa em fazer. {transcriptionServer ? "" : "A transcrição usa o reconhecimento de voz do navegador."}</p>
               </>
             )
@@ -99,7 +99,7 @@ function Scale({ label, value, onChange }: { label: string; value: number | null
       <div className="grid flex-1 grid-cols-5 gap-1.5" role="radiogroup" aria-label={label}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button key={n} type="button" role="radio" aria-checked={value === n} onClick={() => onChange(n)}
-            className={cx("h-10 rounded-lg border text-sm tabular-nums", value === n ? "border-ink bg-ink text-bg" : "border-line bg-surface text-muted")}>{n}</button>
+            className={cx("h-10 rounded-lg border text-sm tabular-nums", value === n ? "border-accent bg-accent text-accent-fg" : "border-line bg-surface text-muted")}>{n}</button>
         ))}
       </div>
     </div>

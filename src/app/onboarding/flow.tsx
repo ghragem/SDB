@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useActionState, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { Button, ErrorNote, Input, Select, Textarea, cx } from "@/components/ui";
@@ -78,7 +79,7 @@ export function OnboardingFlow({ name }: { name: string | null }) {
             const on = skills.includes(s);
             return (
               <button key={s} type="button" aria-pressed={on} onClick={() => setSkills((xs) => (on ? xs.filter((x) => x !== s) : [...xs, s]))}
-                className={cx("h-9 rounded-full border px-3.5 text-sm", on ? "border-ink bg-ink text-bg" : "border-line text-muted")}>{s}</button>
+                className={cx("h-9 rounded-full border px-3.5 text-sm", on ? "border-accent bg-accent text-accent-fg" : "border-line text-muted")}>{s}</button>
             );
           })}
         </div>
@@ -104,7 +105,7 @@ export function OnboardingFlow({ name }: { name: string | null }) {
             ["muito_direto", "Muito direto", "“Isso não fecha.” “Você não validou isso.”"],
           ].map(([k, label, desc]) => (
             <button key={k} type="button" onClick={() => setReality(k)} aria-pressed={reality === k}
-              className={cx("flex w-full items-start gap-3 rounded-[10px] border p-3.5 text-left", reality === k ? "border-ink bg-surface" : "border-line")}>
+              className={cx("flex w-full items-start gap-3 rounded-[10px] border p-3.5 text-left", reality === k ? "border-accent bg-accent-soft" : "border-line")}>
               <span className={cx("mt-1 h-3.5 w-3.5 shrink-0 rounded-full border-2", reality === k ? "border-accent bg-accent" : "border-line-strong")} />
               <span><span className="block font-medium">{label}</span><span className="text-sm text-muted">{desc}</span></span>
             </button>
@@ -117,7 +118,7 @@ export function OnboardingFlow({ name }: { name: string | null }) {
   const last = step === steps.length - 1;
 
   return (
-    <form action={action}>
+    <form action={action} onSubmit={(e) => { if (!last) { e.preventDefault(); setStep((s) => s + 1); } }}>
       {/* Estado do formulário inteiro vai junto no envio */}
       <input type="hidden" name="goals" value={goals} />
       <input type="hidden" name="problems" value={problems} />
@@ -132,12 +133,12 @@ export function OnboardingFlow({ name }: { name: string | null }) {
       ))}
 
       <div className="mb-8 flex items-center gap-3">
-        <span className="h-2.5 w-2.5 rounded-sm bg-accent" aria-hidden />
+        <Image src="/logo-mark.png" alt="" width={26} height={26} className="rounded-[6px]" />
         <span className="text-[12px] font-semibold uppercase tracking-[0.14em]">{name ? `${name}, ` : ""}5 perguntas</span>
         <span className="ml-auto text-sm tabular-nums text-muted">{step + 1}/{steps.length}</span>
       </div>
       <div className="mb-6 flex gap-1" aria-hidden>
-        {steps.map((_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i <= step ? "bg-ink" : "bg-line")} />)}
+        {steps.map((_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i <= step ? "bg-accent" : "bg-line")} />)}
       </div>
 
       <h1 className="text-[24px] font-semibold leading-tight tracking-tight">{steps[step].title}</h1>
@@ -149,9 +150,9 @@ export function OnboardingFlow({ name }: { name: string | null }) {
       <div className="mt-8 flex items-center justify-between gap-3">
         <Button type="button" variant="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>Voltar</Button>
         {last ? (
-          <Button type="submit" variant="primary" disabled={pending}>{pending ? "Montando sua primeira sessão…" : "Concluir"}</Button>
+          <Button key="concluir" type="submit" variant="primary" disabled={pending}>{pending ? "Montando sua primeira sessão…" : "Concluir"}</Button>
         ) : (
-          <Button type="button" variant="primary" onClick={() => setStep((s) => s + 1)}>Continuar</Button>
+          <Button key="continuar" type="button" variant="primary" onClick={(e) => { e.preventDefault(); setStep((s) => s + 1); }}>Continuar</Button>
         )}
       </div>
     </form>

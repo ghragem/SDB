@@ -29,6 +29,7 @@ export type RecordingResult = {
 };
 
 const now = () => Date.now();
+const IDLE_BARS = [20, 35, 25, 50, 30, 60, 40, 25, 45, 70, 35, 20, 55, 30, 45, 25, 60, 35, 20, 40, 30, 50, 25, 35, 20, 30, 25, 20];
 
 const pickMime = () => {
   if (typeof MediaRecorder === "undefined") return "";
@@ -227,17 +228,25 @@ export function Recorder({ onDone, folder = "checkin", maxSec = 180, label = "To
   return (
     <div>
       {phase === "idle" ? (
-        <button type="button" onClick={start}
-          className="flex h-16 w-full items-center justify-center gap-3 rounded-xl bg-ink text-[16px] font-medium text-bg active:scale-[0.99] transition-transform">
-          <Mic size={20} /> {label}
-        </button>
+        <div className="flex items-center gap-4">
+          <button type="button" onClick={start} aria-label={label}
+            className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-accent text-accent-fg shadow-[0_8px_24px_rgba(232,48,42,0.35)] transition-transform active:scale-95">
+            <Mic size={26} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex h-7 items-center gap-[3px]" aria-hidden>
+              {IDLE_BARS.map((h, i) => <span key={i} className="w-full rounded-full bg-line-strong" style={{ height: `${h}%` }} />)}
+            </div>
+            <p className="mt-1.5 font-mono text-xs tabular-nums text-muted">0:00 / {Math.floor(maxSec / 60)}:{String(maxSec % 60).padStart(2, "0")} · {label}</p>
+          </div>
+        </div>
       ) : (
         <div className="rounded-xl border border-line bg-surface p-3">
           <div className="flex items-center gap-3">
             <span className={cx("h-2.5 w-2.5 rounded-full", phase === "recording" ? "bg-accent animate-pulse" : "bg-faint")} />
             <span className="font-mono text-sm tabular-nums">{mm}:{ss}</span>
             <div className="flex h-8 flex-1 items-center gap-[3px]" aria-hidden>
-              {levels.map((l, i) => <span key={i} className="w-full rounded-full bg-ink/70" style={{ height: `${Math.round(l * 100)}%` }} />)}
+              {levels.map((l, i) => <span key={i} className="w-full rounded-full bg-accent" style={{ height: `${Math.round(l * 100)}%` }} />)}
             </div>
           </div>
           {live ? <p className="mt-2 line-clamp-3 text-sm text-muted">{live}</p> : null}

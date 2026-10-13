@@ -15,7 +15,7 @@ const QUESTIONS: [string, string][] = [
   ["reversible", "6. Isso é reversível?"],
 ];
 
-export function AnalyzeIdea({ idea }: { idea: Idea }) {
+export function AnalyzeIdea({ idea, lastVerdict }: { idea: Idea; lastVerdict?: string | null }) {
   const [state, action, pending] = useActionState<IdeaState, FormData>(analyzeIdea, {});
   return (
     <form action={action} className="space-y-3">
@@ -31,13 +31,15 @@ export function AnalyzeIdea({ idea }: { idea: Idea }) {
           {[["oportunidade", "Oportunidade"], ["novidade", "Novidade"], ["nao_sei", "Não sei"]].map(([v, l]) => (
             <label key={v} className="relative">
               <input type="radio" name="opportunity_or_novelty" value={v} defaultChecked={idea.opportunity_or_novelty === v} className="peer sr-only" />
-              <span className={cx("flex h-10 items-center justify-center rounded-lg border border-line text-sm text-muted peer-checked:border-ink peer-checked:bg-ink peer-checked:text-bg peer-focus-visible:outline-2 peer-focus-visible:outline-accent")}>{l}</span>
+              <span className={cx("flex h-10 items-center justify-center rounded-lg border border-line text-sm text-muted peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:outline-2 peer-focus-visible:outline-accent")}>{l}</span>
             </label>
           ))}
         </div>
       </fieldset>
       {state.error ? <ErrorNote>{state.error}</ErrorNote> : null}
-      {state.verdict ? <p className={cx("rounded-lg px-3 py-2 text-sm", state.ok ? "bg-surface-2" : "bg-accent-soft text-accent")}>{state.verdict}</p> : null}
+      {state.verdict || lastVerdict ? (
+        <p role="status" className={cx("rounded-lg px-3 py-2 text-sm", (state.verdict ?? lastVerdict)?.startsWith("Promovida") || lastVerdict === "Análise salva." ? "bg-surface-2" : "bg-accent-soft text-accent")}>{state.verdict ?? lastVerdict}</p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" name="intent" value="save" size="sm" disabled={pending}>Salvar análise</Button>
         <Button type="submit" name="intent" value="promote" variant="primary" size="sm" disabled={pending}>Promover a projeto</Button>

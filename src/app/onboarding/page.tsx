@@ -10,7 +10,7 @@ export default async function OnboardingPage() {
   const { data } = await supabase.from("profiles").select("onboarded_at, display_name").maybeSingle();
   if (data?.onboarded_at) redirect("/hoje");
   return (
-    <main className="pt-safe mx-auto min-h-dvh max-w-xl px-5 py-8 sm:py-14">
+    <main className="pt-page mx-auto min-h-dvh max-w-xl px-5 pb-8 sm:pb-14">
       <OnboardingFlow name={data?.display_name ?? null} />
     </main>
   );

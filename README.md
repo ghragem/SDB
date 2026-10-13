@@ -2,6 +2,8 @@
 
 Sistema operacional pessoal do Gustavo. Pensar melhor. Decidir melhor. Executar melhor.
 
+Visual: tema escuro grafite com vermelho como único acento e o ícone oficial (`assets/icone-app.png`, ícones gerados por `node scripts/icons.mjs`), seguindo o mockup aprovado.
+
 Next.js 16 (App Router) · TypeScript · Tailwind 4 · Supabase (Postgres + Auth + Storage, RLS em todas as tabelas) · PWA.
 
 ## Rodar
@@ -38,7 +40,7 @@ As migrações em `supabase/migrations/` já foram aplicadas no projeto.
 | Login | E-mail e senha, criar conta com confirmação, logout. Proxy redireciona quem não está logado. |
 | Onboarding | 5 passos (melhorar, projetos, habilidades, problemas, modo realidade, padrão "muito direto"). Gera a primeira sessão para a Home nunca abrir vazia. Carrega as 5 regras pré-definidas. |
 | Hoje | Pulso (Falar, Escrever, Rápido), leitura do dia, 3–5 itens da sessão com check, projeto prioritário com próxima prova, bloqueio e dias sem progresso, registro de avanço, próxima decisão, dinheiro do mês, finalizar sessão. |
-| Check-in | Voz grava áudio (Storage privado) e transcreve pelo reconhecimento do navegador; se não houver, tenta o servidor (OpenAI, se configurado); senão pede o texto. Estados Ataque, Normal, Sobrevivência. |
+| Check-in | Áudio, Texto ou Rápido. Voz grava áudio (Storage privado) e transcreve pelo reconhecimento do navegador; se não houver, tenta o servidor (OpenAI, se configurado); senão pede o texto. Estados Ataque, Normal, Sobrevivência. |
 | Projetos | CRUD, 8 estados, próxima prova, bloqueio, linha do tempo de avanços, dias sem progresso reais, mini DRE por projeto, decisões e experimentos ligados. Nenhuma porcentagem inventada. |
 | Ideias | Captura, regra anti-dispersão com as 7 perguntas. Promoção a projeto bloqueada sem respostas ou quando a própria resposta é "novidade". |
 | Decidir | Decision Card completo, pre-mortem, checagem de lacunas por regras, sugestão de veredito, veredito com confiança e data de revisão, decisão contra a recomendação, experimento com critério de parada e escala, revisão previsão x realidade que vira aprendizado no Brain. "Destrua minha ideia" e "Eu estou viajando?" (precisam de IA). |
@@ -77,10 +79,34 @@ Todas as 40 tabelas da seção 76 existem com `id, user_id, created_at, updated_
 
 ## Testes
 
-- `npm run build` e `npm run lint` passam.
-- RLS verificado no banco: outro usuário não vê nem busca dados alheios, e insert com `user_id` alheio é bloqueado.
-- Trigger de avanço, criação de perfil e busca em português verificados no banco.
-- `scripts/e2e.mjs` cobre login errado, onboarding, check-in, sessão, avanço, captura, inbox, dinheiro, ideias, decisão, brain, review, refresh, logout e login, desktop com ⌘K e modo escuro.
+`npm run build`, `npx tsc --noEmit` e `npm run lint` passam.
+
+Ponta a ponta (`scripts/e2e.mjs`, Playwright): 26 passos com conta nova, sem dado pronto. Cadastro pela tela, login recusado antes de confirmar, confirmação pelo link real do e-mail, onboarding, check-in por voz (microfone e upload do áudio no Storage), por texto e rápido, sessão, avanço, captura, Inbox, Dinheiro, Projetos, Ideias, Decidir, Brain com busca, Aprender, Falar, Review, Notificações, Ajustes, reload, logout e login com tudo de volta, navegação mobile e desktop com ⌘K. Cada passo confere a tela e o banco.
+
+Rodar contra uma cópia local do Supabase (precisa de Docker):
+
+```bash
+npx supabase@2.120.0 start          # sobe Postgres, Auth, Storage e Mailpit com as migrações deste repo
+# .env com a URL e a chave publicável que o comando acima imprime, depois:
+npm run build && npx next start -p 3100
+BASE_URL=http://localhost:3100 MAILPIT_URL=http://127.0.0.1:54324 \
+DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres node scripts/e2e.mjs
+```
+
+O schema local e o de produção são idênticos (mesmo hash de colunas e de políticas RLS).
+
+## Deploy na Vercel
+
+1. Suba este código para um repositório no GitHub.
+2. Na Vercel: Add New → Project → importe o repositório. Framework: Next.js (detectado).
+3. Environment Variables:
+   - `NEXT_PUBLIC_SUPABASE_URL` = `https://xjtwaodxxgkemkfpkjex.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = `sb_publishable_N2mn-L1Xx5Iq-VbgsM1zlQ_KrUQz3Qi`
+   - opcional, só no servidor: `ANTHROPIC_API_KEY` (e `OPENAI_API_KEY` se quiser transcrição pelo servidor)
+4. Deploy. Depois, no Supabase: Authentication → URL Configuration → Site URL = `https://SEU-PROJETO.vercel.app` e Redirect URLs = `https://SEU-PROJETO.vercel.app/auth/callback`.
+5. No iPhone: abra a URL no Safari → Compartilhar → Adicionar à Tela de Início.
+
+O e-mail de confirmação usa o servidor de e-mail padrão do Supabase, que só entrega para e-mails da equipe do projeto Supabase e tem limite baixo por hora. Para conta pessoal isso basta; para mais usuários, configure um SMTP próprio.
 
 ## Backlog (visão completa no briefing)
 

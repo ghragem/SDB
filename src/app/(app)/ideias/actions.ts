@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
 import { str } from "@/lib/format";
 
@@ -27,23 +28,16 @@ export async function analyzeIdea(_: IdeaState, form: FormData): Promise<IdeaSta
 
   const patch: Record<string, unknown> = { ...answers, opportunity_or_novelty: kind };
   if (intent === "save") {
-    patch.status = "analisando";
-    await supabase.from("ideas").update(patch).eq("id", id);
-    revalidatePath("/ideias");
-    return { ok: true };
+    return verdictAndReopen(supabase, id, { ...patch, status: "analisando" }, "Análise salva.");
   }
 
   // intent === "promote"
   const missing = Q.filter((k) => !answers[k]);
   if (missing.length || !kind) {
-    await supabase.from("ideas").update({ ...patch, status: "analisando" }).eq("id", id);
-    revalidatePath("/ideias");
-    return { verdict: "Não iniciar agora. Faltam respostas. Ideia sem justificativa não passa na frente de projeto em andamento." };
+    return verdictAndReopen(supabase, id, { ...patch, status: "analisando" }, "Não iniciar agora. Faltam respostas. Ideia sem justificativa não passa na frente de projeto em andamento.");
   }
   if (kind !== "oportunidade") {
-    await supabase.from("ideas").update({ ...patch, status: "validar" }).eq("id", id);
-    revalidatePath("/ideias");
-    return { verdict: kind === "novidade" ? "Você mesmo classificou como novidade. Não iniciar agora. Ficou em Validar." : "Se você não sabe se é oportunidade, ainda não é. Ficou em Validar: defina um teste pequeno primeiro." };
+    return verdictAndReopen(supabase, id, { ...patch, status: "validar" }, kind === "novidade" ? "Você mesmo classificou como novidade. Não iniciar agora. Ficou em Validar." : "Se você não sabe se é oportunidade, ainda não é. Ficou em Validar: defina um teste pequeno primeiro.");
   }
   const { data: idea } = await supabase.from("ideas").select("title, description").eq("id", id).single();
   const { data: project, error } = await supabase.from("projects").insert({
@@ -64,4 +58,18 @@ export async function setIdeaStatus(form: FormData) {
   if (!["capturada","analisando","validar","teste","descartada","arquivada"].includes(status)) return;
   await supabase.from("ideas").update({ status, discard_reason: str(form.get("discard_reason")) }).eq("id", String(form.get("id")));
   revalidatePath("/ideias");
+}
+
+type Supa = Awaited<ReturnType<typeof requireUser>>["supabase"];
+
+/** Salva o veredito na ideia e reabre o card dela: a ideia muda de grupo e o card remonta. */
+async function verdictAndReopen(supabase: Supa, id: string, patch: Record<string, unknown>, verdict: string): Promise<IdeaState> {
+  const { data: cur } = await supabase.from("ideas").select("metadata").eq("id", id).single();
+  const { error } = await supabase.from("ideas").update({
+    ...patch,
+    metadata: { ...((cur?.metadata as Record<string, unknown> | null) ?? {}), last_verdict: verdict, last_verdict_at: new Date().toISOString() },
+  }).eq("id", id);
+  if (error) return { error: "Não consegui salvar a análise. Tente de novo." };
+  revalidatePath("/ideias");
+  redirect(`/ideias?aberta=${id}#${id}`);
 }

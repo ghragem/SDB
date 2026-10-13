@@ -17,7 +17,8 @@ const GROUPS: [string, string[]][] = [
 ];
 const STATUS_LABEL: Record<string, string> = { capturada: "Capturada", analisando: "Analisando", validar: "Validar", teste: "Teste", promover: "Promovida", descartada: "Descartada", arquivada: "Arquivada" };
 
-export default async function IdeiasPage() {
+export default async function IdeiasPage({ searchParams }: PageProps<"/ideias">) {
+  const { aberta } = await searchParams;
   const { supabase } = await requireUser();
   const [{ data }, active] = await Promise.all([
     supabase.from("ideas").select("*").order("created_at", { ascending: false }),
@@ -54,7 +55,7 @@ export default async function IdeiasPage() {
                 <div className="space-y-2">
                   {list.map((i) => (
                     <Card key={i.id} id={i.id}>
-                      <details>
+                      <details open={aberta === i.id}>
                         <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-3.5">
                           <span className="min-w-0">
                             <span className="block font-medium">{i.title}</span>
@@ -68,7 +69,7 @@ export default async function IdeiasPage() {
                           ) : (
                             <>
                               <p className="label">Regra anti-dispersão</p>
-                              <AnalyzeIdea idea={i} />
+                              <AnalyzeIdea idea={i} lastVerdict={aberta === i.id ? ((i.metadata as { last_verdict?: string } | null)?.last_verdict ?? null) : null} />
                               <div className="flex flex-wrap gap-2 border-t border-line pt-4">
                                 {["teste", "arquivada"].map((s) => (
                                   <form key={s} action={setIdeaStatus}>
