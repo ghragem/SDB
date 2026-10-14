@@ -3,11 +3,38 @@ import { requireUser } from "@/lib/supabase/server";
 import { fmtDay, fmtMoney } from "@/lib/format";
 import { Badge, Card, Empty, PageHeader, Section } from "@/components/ui";
 import { discard, route } from "./actions";
+import { suggestFor } from "@/lib/interpret";
 
 export const metadata: Metadata = { title: "Inbox" };
 
 const CATS = ["vendas","servicos","salario","ads","gateway","ferramentas","reembolso","estoque","faculdade","lazer","compras","moradia","transporte","alimentacao","patrimonio","outros"];
 const btn = "h-9 rounded-lg border border-line px-3 text-sm text-muted hover:border-line-strong hover:text-ink";
+
+type Sug = { to: string; label: string; why: string; projectId?: string | null; updateKind?: string };
+
+/** Destino sugerido pelo interpretador de regras (o mesmo da captura). */
+function suggestion(it: { body: string; amount: number | null; kind: string; metadata: unknown }, ps: { id: string; name: string }[]): Sug | null {
+  if (it.kind === "audio" && /^Áudio/.test(it.body)) return null;
+  const s = suggestFor(it.body, ps);
+  if (!s) return null;
+  const meta = (it.metadata ?? {}) as { project_id?: string | null };
+  const pid = meta.project_id ?? s.projectId;
+  const pname = ps.find((p) => p.id === pid)?.name;
+  const amount = it.amount ?? s.amount;
+  const why = s.why || "pelo texto";
+  switch (s.kind) {
+    case "avanco": case "evidencia": case "bloqueio":
+      return pname ? { to: "projeto", projectId: pid, updateKind: s.kind === "avanco" ? "avanco" : s.kind === "evidencia" ? "validacao" : "bloqueio", label: `${s.kind === "avanco" ? "Avanço" : s.kind === "evidencia" ? "Evidência" : "Bloqueio"} em ${pname}`, why } : null;
+    case "despesa": case "receita":
+      return amount ? { to: s.kind, projectId: pid, label: `${s.kind === "despesa" ? "Despesa" : "Receita"} ${fmtMoney(Number(amount))}${pname ? ` · ${pname}` : " · sem projeto"}`, why } : null;
+    case "ideia": return { to: "ideia", label: "Ideia", why };
+    case "decisao": return { to: "decisao_nota", label: "Decisão no Brain", why };
+    case "aprendizado": return { to: "aprendizado", label: "Aprendizado no Brain", why };
+    case "hipotese": return { to: "hipotese", label: "Hipótese no Brain", why };
+    case "tarefa": return pname ? { to: "projeto", projectId: pid, updateKind: "nota", label: `Nota em ${pname}`, why } : null;
+    default: return { to: "nota", label: "Nota no Brain", why: "sem sinal claro" };
+  }
+}
 
 export default async function InboxPage() {
   const { supabase } = await requireUser();
@@ -27,7 +54,7 @@ export default async function InboxPage() {
 
   return (
     <>
-      <PageHeader title="Inbox" subtitle="Capture primeiro. Classifique depois. Use o + em qualquer tela." />
+      <PageHeader title="Inbox" subtitle="Lugar para jogar qualquer coisa sem decidir onde ela pertence: áudio, pensamento, tarefa, erro, link, gasto, ideia. Depois o sistema sugere onde guardar e você confirma com um toque." />
       <div className="space-y-8">
         {items.length ? (
           <div className="space-y-2">
@@ -44,6 +71,20 @@ export default async function InboxPage() {
                   <p className="mt-2 whitespace-pre-wrap">{it.body}</p>
                   {meta(it).audio_path && audioUrl.get(meta(it).audio_path!) ? <audio controls preload="none" src={audioUrl.get(meta(it).audio_path!)} className="mt-2 h-10 w-full" /> : null}
                   {meta(it).source === "importacao" ? <p className="mt-1 text-xs text-faint">Da conversa importada “{meta(it).conversation}”</p> : null}
+                  {(() => {
+                    const s = suggestion(it, ps);
+                    if (!s) return null;
+                    return (
+                      <form action={route} className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
+                        <input type="hidden" name="id" value={it.id} />
+                        <input type="hidden" name="to" value={s.to} />
+                        {s.projectId ? <input type="hidden" name="project_id" value={s.projectId} /> : null}
+                        {s.updateKind ? <input type="hidden" name="update_kind" value={s.updateKind} /> : null}
+                        <span className="min-w-0 flex-1 text-[13px]"><span className="text-muted">Sugestão:</span> <b>{s.label}</b> <span className="text-faint">· {s.why}</span></span>
+                        <button className="h-8 shrink-0 rounded-lg bg-accent px-3 text-[13px] font-medium text-accent-fg">Guardar aí</button>
+                      </form>
+                    );
+                  })()}
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
                     {money ? (
                       <form action={route} className="flex flex-wrap gap-2">

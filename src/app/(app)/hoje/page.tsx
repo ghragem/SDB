@@ -10,6 +10,7 @@ import { DAY_STATE_LABEL, PROJECT_STATUS_LABEL, type DayState } from "@/lib/type
 import { Badge, Empty, LinkButton, cx } from "@/components/ui";
 import { Submit } from "@/components/submit";
 import { NextActionForm } from "@/components/next-action-form";
+import { AskSDB } from "@/components/ask-sdb";
 import { Checkin } from "./checkin";
 import { logProgress } from "./actions";
 
@@ -77,6 +78,11 @@ export default async function HojePage({ searchParams }: PageProps<"/hoje">) {
             <Checkin transcriptionServer={ai.transcription} />
           </div>
         )}
+      </section>
+
+      <section aria-label="Pergunte ao SDB" className="rounded-2xl border border-line bg-surface p-4">
+        <p className="label mb-2">Pergunte ao SDB</p>
+        <AskSDB />
       </section>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">

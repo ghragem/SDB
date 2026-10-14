@@ -8,13 +8,14 @@ import { Badge, Button, Card, Empty, LinkButton, Section, Select, cx } from "@/c
 import { Submit } from "@/components/submit";
 import { ProjectForm } from "../project-form";
 import { NextActionForm } from "@/components/next-action-form";
+import { SpeakUpdate } from "@/components/speak-update";
 import { loadOperational } from "@/lib/operational";
 import { actionQuality } from "@/lib/engine";
 import { addUpdate, deleteProject } from "../actions";
 
 export const metadata: Metadata = { title: "Projeto" };
 
-const UPDATE_LABEL: Record<string, string> = { avanco: "Avanço", bloqueio: "Bloqueio", decisao: "Decisão", nota: "Nota", validacao: "Validação" };
+const UPDATE_LABEL: Record<string, string> = { avanco: "Avanço", bloqueio: "Bloqueio", decisao: "Decisão", nota: "Nota", validacao: "Evidência" };
 const COST_CATS = ["ads", "gateway", "ferramentas", "reembolso", "estoque"];
 
 export default async function ProjetoPage({ params }: PageProps<"/projetos/[id]">) {
@@ -24,12 +25,39 @@ export default async function ProjetoPage({ params }: PageProps<"/projetos/[id]"
   if (!project) notFound();
   const p = project as Project;
 
-  const [updates, tx, decisions, experiments] = await Promise.all([
-    supabase.from("project_updates").select("*").eq("project_id", id).order("created_at", { ascending: false }).limit(50),
-    supabase.from("finance_transactions").select("type, amount, category").eq("project_id", id),
-    supabase.from("decisions").select("id, title, verdict, status").eq("project_id", id).order("created_at", { ascending: false }),
-    supabase.from("experiments").select("id, hypothesis, status").eq("project_id", id).order("created_at", { ascending: false }),
+  const [updates, tx, decisions, experiments, notes, linked] = await Promise.all([
+    supabase.from("project_updates").select("*").eq("project_id", id).order("created_at", { ascending: false }).limit(80),
+    supabase.from("finance_transactions").select("id, type, amount, category, description, occurred_on, created_at").eq("project_id", id),
+    supabase.from("decisions").select("id, title, verdict, status, created_at, updated_at").eq("project_id", id).order("created_at", { ascending: false }),
+    supabase.from("experiments").select("id, hypothesis, status, result, learning, created_at, updated_at").eq("project_id", id).order("created_at", { ascending: false }),
+    supabase.from("brain_notes").select("id, kind, title, body, created_at").eq("project_id", id).neq("kind", "conversa").order("created_at", { ascending: false }).limit(40),
+    supabase.from("brain_links").select("from_id, relation").eq("to_kind", "projeto").eq("to_id", id).eq("from_kind", "nota"),
   ]);
+  const linkedIds = (linked.data ?? []).map((l) => l.from_id).filter((x) => !(notes.data ?? []).some((n) => n.id === x));
+  const linkedNotes = linkedIds.length ? (await supabase.from("brain_notes").select("id, kind, title, body, created_at").in("id", linkedIds)).data ?? [] : [];
+
+  // Linha do tempo: tudo que o sistema sabe deste projeto, em ordem. Nada de porcentagem.
+  type Ev = { at: string; kind: string; tone: "ink" | "ok" | "accent" | "muted" | "info"; text: string; href?: string };
+  const events: Ev[] = [
+    { at: p.created_at, kind: "Começou", tone: "muted" as const, text: "Projeto cadastrado no sistema." },
+    ...(updates.data ?? []).map((u): Ev => ({
+      at: u.created_at, kind: u.kind === "validacao" ? "Evidência" : UPDATE_LABEL[u.kind] ?? u.kind,
+      tone: u.kind === "validacao" ? "ok" : u.is_progress ? "ink" : u.kind === "bloqueio" ? "accent" : "muted", text: u.body,
+    })),
+    ...(tx.data ?? []).map((t): Ev => ({
+      at: t.created_at, kind: t.type === "receita" ? "Receita" : t.type === "investimento" ? "Investimento" : "Gasto",
+      tone: t.type === "receita" ? "ok" : "accent", text: `${fmtMoney(Number(t.amount))}${t.description ? ` · ${t.description}` : ` · ${t.category}`}`, href: "/dinheiro",
+    })),
+    ...(decisions.data ?? []).map((d): Ev => ({ at: d.created_at, kind: "Decisão", tone: "info", text: `${d.title}${d.verdict ? ` → ${d.verdict.replace("_", " ")}` : " (sem veredito)"}`, href: `/decidir/${d.id}` })),
+    ...(experiments.data ?? []).flatMap((e): Ev[] => [
+      { at: e.created_at, kind: "Experimento", tone: "info", text: `Hipótese: ${e.hypothesis}`, href: "/decidir#risco" },
+      ...(["validado", "rejeitado", "inconclusivo"].includes(e.status) ? [{ at: e.updated_at, kind: "Resultado", tone: (e.status === "validado" ? "ok" : "accent") as Ev["tone"], text: `${e.status}${e.learning ? ` · aprendizado: ${e.learning}` : e.result ? ` · ${e.result}` : ""}` }] : []),
+    ]),
+    ...[...(notes.data ?? []), ...linkedNotes].map((n): Ev => ({
+      at: n.created_at, kind: n.kind === "hipotese" ? "Hipótese" : n.kind === "aprendizado" ? "Aprendizado" : n.kind === "erro" ? "Erro" : n.kind === "decisao" ? "Decisão" : "Nota",
+      tone: n.kind === "erro" ? "accent" : "muted", text: n.title ? `${n.title}: ${n.body}` : n.body, href: `/brain?nota=${n.id}`,
+    })),
+  ].sort((a, b) => b.at.localeCompare(a.at));
 
   const idle = daysSince(p.last_progress_at);
   const op = await loadOperational();
@@ -81,13 +109,17 @@ export default async function ProjetoPage({ params }: PageProps<"/projetos/[id]"
       </Card>
 
       {/* Progresso real, sem porcentagem inventada (seção 27) */}
-      <Card className="grid divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      <Card className="grid grid-cols-2 divide-line sm:grid-cols-3 [&>*]:border-line [&>*]:border-b sm:[&>*:nth-last-child(-n+3)]:border-b-0">
+        <Fact label="Começou" value={fmtDay(p.created_at)} />
+        <Fact label="Último avanço" value={p.last_progress_at ? fmtDay(p.last_progress_at) : "Nunca registrou"} warn={!p.last_progress_at} />
+        <Fact label="Dias parado" value={String(scored?.idleDays ?? idle ?? 0)} warn={(scored?.idleDays ?? idle ?? 0) >= 5} />
         <Fact label="Próxima prova" value={p.next_proof ?? "Não definida"} warn={!p.next_proof} />
+        <Fact label="Próximo entregável" value={p.next_delivery ?? "Não definido"} />
         <Fact label="Bloqueio" value={p.blocker ?? "Nenhum registrado"} />
-        <Fact label="Dias sem progresso" value={idle === null ? "Nunca registrou" : String(idle)} warn={idle === null || idle >= 5} />
       </Card>
 
-      <Section title="Registrar">
+      <div id="registrar" className="scroll-mt-20" />
+      <Section title="Registrar" action={<SpeakUpdate projectId={p.id} projectName={p.name} className="h-9" />}>
         <form action={addUpdate} className="space-y-2">
           <input type="hidden" name="project_id" value={p.id} />
           <div className="flex gap-2">
@@ -101,19 +133,19 @@ export default async function ProjetoPage({ params }: PageProps<"/projetos/[id]"
         </form>
       </Section>
 
-      <Section title="Linha do tempo">
-        {updates.data?.length ? (
+      <Section title="Linha do tempo" action={<span className="text-xs text-muted">{events.length} eventos</span>}>
+        {events.length > 1 ? (
           <ol className="relative space-y-4 border-l border-line pl-5">
-            {updates.data.map((u) => (
-              <li key={u.id} className="relative">
-                <span className={cx("absolute -left-[25px] top-1.5 h-2 w-2 rounded-full", u.is_progress ? "bg-ink" : u.kind === "bloqueio" ? "bg-accent" : "bg-line-strong")} />
-                <p className="text-xs text-muted">{fmtDay(u.created_at)} · {UPDATE_LABEL[u.kind] ?? u.kind}</p>
-                <p className="mt-0.5">{u.body}</p>
+            {events.slice(0, 80).map((e, i) => (
+              <li key={i} className="relative">
+                <span className={cx("absolute -left-[25px] top-1.5 h-2 w-2 rounded-full", { ink: "bg-ink", ok: "bg-ok", accent: "bg-accent", muted: "bg-line-strong", info: "bg-info" }[e.tone])} />
+                <p className="text-xs text-muted">{fmtDay(e.at)} · {e.kind}</p>
+                {e.href ? <Link href={e.href} className="mt-0.5 block hover:underline">{e.text}</Link> : <p className="mt-0.5">{e.text}</p>}
               </li>
             ))}
           </ol>
         ) : (
-          <Empty title="Nenhum registro ainda.">Registre o primeiro avanço real. É isso que conta os dias sem progresso.</Empty>
+          <Empty title="Só o cadastro, por enquanto.">Fale ou registre o primeiro avanço real. É isso que conta os dias sem progresso.</Empty>
         )}
       </Section>
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { parseMoney, str, todaySP } from "@/lib/format";
+import { categoryOf, parseAmount } from "@/lib/interpret";
 
 export type CaptureState = { ok?: boolean; error?: string; at?: number; offline?: boolean };
 
@@ -40,20 +41,24 @@ export async function route(form: FormData) {
     const { data } = await supabase.from("decisions").insert({ user_id: userId, title: item.body.slice(0, 200) }).select("id").single();
     routedTable = "decisions"; routedId = data?.id ?? null;
   } else if (to === "despesa" || to === "receita") {
-    if (!item.amount) return;
+    const amount = item.amount ?? parseAmount(item.body);
+    if (!amount) return;
     const { data } = await supabase.from("finance_transactions").insert({
-      user_id: userId, type: to, amount: item.amount, description: item.body, occurred_on: todaySP(),
-      category: String(form.get("category") ?? "outros"), project_id: str(form.get("project_id")),
+      user_id: userId, type: to, amount, description: item.body, occurred_on: todaySP(),
+      category: String(form.get("category") ?? (to === "receita" ? "vendas" : categoryOf(item.body))), project_id: str(form.get("project_id")),
     }).select("id").single();
     routedTable = "finance_transactions"; routedId = data?.id ?? null;
   } else if (to === "projeto") {
     const projectId = str(form.get("project_id"));
     if (!projectId) return;
-    const { data } = await supabase.from("project_updates").insert({ user_id: userId, project_id: projectId, body: item.body, kind: "nota", is_progress: false }).select("id").single();
+    // avanço e evidência contam como progresso; o resto entra como nota na linha do tempo
+    const uk = String(form.get("update_kind") ?? "nota");
+    const kind = ["avanco", "validacao", "bloqueio", "nota"].includes(uk) ? uk : "nota";
+    const { data } = await supabase.from("project_updates").insert({ user_id: userId, project_id: projectId, body: item.body, kind, is_progress: kind === "avanco" || kind === "validacao" }).select("id").single();
     routedTable = "project_updates"; routedId = data?.id ?? null;
   } else {
     // Brain: nota, insight, erro, aprendizado, link, conversa, oportunidade...
-    const kindMap: Record<string, string> = { erro: "erro", aprendizado: "aprendizado", link: "link", conversa: "conversa", insight: "insight", oportunidade: "pesquisa" };
+    const kindMap: Record<string, string> = { erro: "erro", aprendizado: "aprendizado", hipotese: "hipotese", decisao_nota: "decisao", link: "link", conversa: "conversa", insight: "insight", oportunidade: "pesquisa" };
     const isUrl = /^https?:\/\//.test(item.body.trim());
     const { data } = await supabase.from("brain_notes").insert({
       user_id: userId, kind: kindMap[to] ?? (isUrl ? "link" : "nota"), body: item.body, url: isUrl ? item.body.trim() : null, source: "inbox",

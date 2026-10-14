@@ -277,6 +277,61 @@ export async function extractFromConversation(ctx: Ctx, title: string, userText:
   );
 }
 
+/** Captura (opcional, só com IA): mesma saída do interpretador por regras, com mais nuance. Nada é salvo sem confirmação. */
+export async function interpretCaptureAI(ctx: Ctx, transcript: string, projectNames: string[]) {
+  const schema: JsonSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["itens"],
+    properties: {
+      itens: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["kind", "text", "projeto", "valor"],
+          properties: {
+            kind: { type: "string", enum: ["avanco", "evidencia", "bloqueio", "despesa", "receita", "ideia", "aprendizado", "hipotese", "decisao", "tarefa", "nota"] },
+            text: str,
+            projeto: { type: ["string", "null"] },
+            valor: { type: ["number", "null"] },
+          },
+        },
+      },
+    },
+  };
+  return run<{ itens: { kind: string; text: string; projeto: string | null; valor: number | null }[] }>(
+    ctx,
+    "interpretar_captura",
+    ["active_projects"],
+    `O Gustavo falou ou escreveu isto, sem formulário:\n"""${transcript.slice(0, 6000)}"""\n\n` +
+      `Projetos existentes: ${projectNames.join(", ") || "nenhum"}.\n` +
+      "Separe em registros. avanco = algo executado; evidencia = reação real de cliente/usuário; bloqueio = algo travado; despesa/receita só com valor dito (em valor, número em reais, senão null); " +
+      "ideia = ideia nova (text = só a ideia); hipotese = suposição ('acho que'); aprendizado = conclusão; decisao = decisão ou observação tipo 'não quero começar agora'; tarefa = algo a fazer; nota = o resto. " +
+      "projeto = nome exato de um projeto da lista quando o item é dele, senão null. text em uma frase, nas palavras dele. Não invente nada que não foi dito.",
+    schema,
+  );
+}
+
+/** Copiloto (opcional, só com IA): redige a resposta usando apenas os fatos levantados pelo sistema. */
+export async function answerWithFacts(ctx: Ctx, question: string, facts: string[], rulesAnswer: string) {
+  const schema: JsonSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["answer", "confidence"],
+    properties: { answer: str, confidence: { type: "string", enum: ["alta", "media", "baixa"] } },
+  };
+  return run<{ answer: string; confidence: string }>(
+    ctx,
+    "copiloto",
+    ["rules"],
+    `Pergunta do Gustavo: "${question}"\n\nFatos do sistema (únicos dados que você pode usar):\n${facts.map((f, i) => `[${i + 1}] ${f}`).join("\n") || "nenhum"}\n\n` +
+      `Resposta por regras (base): ${rulesAnswer}\n\n` +
+      "Responda em até 5 frases, citando fatos concretos com [n]. Termine com a próxima ação recomendada. Se os fatos não bastam, diga que faltam dados e qual registro falta. Não invente.",
+    schema,
+  );
+}
+
 export type SpeechFeedback = { nota: number; problemas: string[]; ponto_forte: string; proximo_exercicio: string };
 
 export async function speechFeedback(ctx: Ctx, prompt: string, transcript: string, metrics: string) {

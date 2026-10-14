@@ -233,6 +233,15 @@ export type AlertInput = {
   ideasLast7d: { id: string; created_at: string }[];
   decisions: QueuedDecision[];
   risks: RiskRow[];
+  /** Cruzamentos entre módulos (opcional). */
+  checks?: CrossChecks;
+};
+
+export type CrossChecks = {
+  claims: { projectId: string; name: string; day: string }[];   // check-in disse que avançou, sem update no dia
+  looseSpend: { count: number; total: number };                 // gastos dos últimos 30 dias sem projeto
+  revenueNoCost: { id: string; name: string; revenue: number }[];
+  ideasWhileBusy: number;                                       // ideias em 7 dias com 3+ projetos ativos
 };
 
 export function computeAlerts(i: AlertInput): Alert[] {
@@ -281,6 +290,26 @@ export function computeAlerts(i: AlertInput): Alert[] {
 
   for (const r of i.risks) {
     if (r.message) out.push({ key: `risco-${r.e.id}`, severity: r.pct !== null && r.pct >= 80 ? 9 : 7, href: "/decidir#risco", cta: "Ver teste", text: `${r.message} (${r.e.hypothesis.slice(0, 70)})` });
+  }
+
+  const c = i.checks;
+  if (c) {
+    for (const cl of c.claims) {
+      out.push({ key: `claim-${cl.projectId}-${cl.day}`, severity: 8, href: `/projetos/${cl.projectId}#registrar`, cta: "Registrar agora",
+        text: `Você disse no check-in${cl.day === i.today ? "" : ` de ${ddmm(cl.day)}`} que avançou o ${cl.name}, mas não existe atualização registrada. Registrar agora?` });
+    }
+    if (c.ideasWhileBusy > 0 && i.ranked.length >= 3 && !out.some((a) => a.key === "dispersao-ideias")) {
+      out.push({ key: "ideias-ocupado", severity: 6, href: "/ideias", cta: "Ver ideias",
+        text: `${plural(c.ideasWhileBusy, "ideia nova criada", "ideias novas criadas")} nos últimos 7 dias com ${i.ranked.length} projetos ativos.` });
+    }
+    if (c.looseSpend.count > 0) {
+      out.push({ key: "gasto-sem-projeto", severity: 5, href: "/dinheiro", cta: "Ver gastos",
+        text: `${plural(c.looseSpend.count, "gasto", "gastos")} sem projeto nos últimos 30 dias (${brl(c.looseSpend.total)}). Sem ligar ao projeto, a margem dele fica errada.` });
+    }
+    for (const r of c.revenueNoCost) {
+      out.push({ key: `sem-custo-${r.id}`, severity: 5, href: `/projetos/${r.id}`, cta: "Registrar custos",
+        text: `${r.name} tem ${brl(r.revenue)} de receita e nenhum custo registrado. A margem real é desconhecida.` });
+    }
   }
 
   return out.sort((a, b) => b.severity - a.severity);

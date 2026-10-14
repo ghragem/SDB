@@ -9,7 +9,12 @@ import { saveSettings } from "./actions";
 
 export const metadata: Metadata = { title: "Ajustes" };
 
-const INTEGRATIONS = ["Google Calendar", "Google Drive", "Gmail", "Meta Ads", "WhatsApp", "Gateways de pagamento", "Open Finance", "Marketplaces", "YouTube"];
+const INTEGRATIONS: [string, string][] = [
+  ["GitHub", "commits e PRs dos projetos"], ["Vercel", "deploys e falhas"], ["Supabase", "saúde dos bancos dos projetos"],
+  ["Google Calendar", "agenda real do dia"], ["Google Drive", "documentos da FAC e projetos"], ["Gmail", "conversas com clientes"],
+  ["Meta Ads", "gasto e resultado de campanha"], ["WhatsApp", "captura por mensagem"], ["Gateways de pagamento", "vendas reais"],
+  ["Open Finance", "extrato"], ["Marketplaces", "preços para o Radar"], ["YouTube", "recomendação de vídeos com fonte"],
+];
 
 export default async function AjustesPage() {
   const { supabase, email } = await requireUser();
@@ -54,8 +59,9 @@ export default async function AjustesPage() {
 
         <Section title="Integrações">
           <Card className="divide-y divide-line text-sm">
-            {INTEGRATIONS.map((i) => <Row key={i} label={i} state="EM BREVE" />)}
+            {INTEGRATIONS.map(([i, what]) => <Row key={i} label={i} detail={what} state="EM BREVE" />)}
           </Card>
+          <p className="text-xs text-faint">O SDB não sabe o que acontece no seu computador nem nessas contas. Ele só vai dizer “AutoFlow recebeu 3 commits” ou “o deploy falhou” quando a integração estiver conectada de verdade (OAuth/API). Até lá, tudo vem do que você registra.</p>
         </Section>
 
         <form action={signOut}>

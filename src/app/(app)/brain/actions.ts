@@ -3,8 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { str } from "@/lib/format";
-import { askHistory } from "@/lib/ai/intelligence";
-import { AIError } from "@/lib/ai/provider";
 
 const KINDS = ["nota","insight","erro","aprendizado","decisao","ideia","pessoa","referencia","link","conversa","pesquisa","hipotese","regra"];
 
@@ -32,20 +30,26 @@ export async function deleteNote(form: FormData) {
   revalidatePath("/brain");
 }
 
-type Hit = { kind: string; id: string; title: string; snippet: string; href: string; created_at: string };
-export type AskState = { answer?: string; confidence?: string; error?: string; q?: string; hits?: Hit[] };
+const LINK_KINDS = ["nota", "projeto", "decisao", "ideia", "experimento"];
+const RELATIONS = ["relacionado", "causou", "levou_a", "contradiz", "confirma", "aprendizado_de"];
 
-export async function ask(_: AskState, form: FormData): Promise<AskState> {
+/** Relaciona uma nota a outro registro (erro → aprendizado → decisão). */
+export async function linkNote(form: FormData) {
   const { supabase, userId } = await requireUser();
-  const q = str(form.get("q"));
-  if (!q) return {};
-  const { data } = await supabase.rpc("search_all", { q });
-  const hits = ((data ?? []) as Hit[]).slice(0, 15);
-  try {
-    const r = await askHistory({ supabase, userId }, q, hits);
-    if (!r) return { q, hits, error: "IA não configurada. Mostrando só a busca." };
-    return { q, hits, answer: r.answer, confidence: r.confidence };
-  } catch (e) {
-    return { q, hits, error: e instanceof AIError ? e.message : "A IA falhou." };
-  }
+  const from = String(form.get("from_id"));
+  const [toKind, toId] = String(form.get("to") ?? "").split(":");
+  const relation = String(form.get("relation") ?? "relacionado");
+  if (!LINK_KINDS.includes(toKind) || !/^[0-9a-f-]{36}$/.test(toId ?? "") || toId === from) return;
+  await supabase.from("brain_links").upsert({
+    user_id: userId, from_kind: "nota", from_id: from, to_kind: toKind, to_id: toId,
+    relation: RELATIONS.includes(relation) ? relation : "relacionado",
+  }, { onConflict: "user_id,from_kind,from_id,to_kind,to_id" });
+  revalidatePath("/brain");
+  if (toKind === "projeto") revalidatePath(`/projetos/${toId}`);
+}
+
+export async function unlink(form: FormData) {
+  const { supabase } = await requireUser();
+  await supabase.from("brain_links").delete().eq("id", String(form.get("id")));
+  revalidatePath("/brain");
 }

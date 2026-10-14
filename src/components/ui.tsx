@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HelpTip } from "./help-tip";
 import type { ComponentProps, ReactNode } from "react";
 
 export function cx(...c: (string | false | null | undefined)[]) {
@@ -59,10 +60,10 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 const inputBase =
   "w-full rounded-lg border border-line bg-surface px-3 text-ink placeholder:text-faint transition-colors focus:border-line-strong focus:outline-none focus-visible:outline-2 focus-visible:outline-accent";
 
-export function Field({ label, hint, children, className }: { label: string; hint?: string; children: ReactNode; className?: string }) {
+export function Field({ label, hint, help, children, className }: { label: string; hint?: string; help?: string; children: ReactNode; className?: string }) {
   return (
     <label className={cx("block space-y-1.5", className)}>
-      <span className="text-sm font-medium">{label}</span>
+      <span className="block text-sm font-medium">{label}{help ? <HelpTip text={help} /> : null}</span>
       {children}
       {hint ? <span className="block text-xs text-muted">{hint}</span> : null}
     </label>

@@ -13,7 +13,7 @@ type SR = {
   onerror: ((e: { error: string }) => void) | null;
   onend: (() => void) | null;
 };
-const getSR = (): (new () => SR) | null => {
+export const getSR = (): (new () => SR) | null => {
   if (typeof window === "undefined") return null;
   const w = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;

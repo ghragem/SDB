@@ -3,12 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
-import { Bell, Flame, Menu, Plus, Search, Shield, Sun, X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Bell, Flame, Menu, Mic, Search, Shield, Sun, X } from "lucide-react";
 import type { DayState } from "@/lib/types";
 import { MOBILE_TABS, NAV, SECONDARY } from "./nav";
 import { cx } from "./ui";
-import { QuickCapture } from "./quick-capture";
+import { CaptureSheet } from "./capture-sheet";
 import { CommandPalette } from "./command-palette";
 import { OfflineSync } from "./offline-sync";
 
@@ -34,6 +34,13 @@ export function Shell({ children, noticeCount, inboxCount, name, dayState }: {
 }) {
   const path = usePathname();
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [captureCtx, setCaptureCtx] = useState<{ projectId: string; projectName: string } | null>(null);
+  // Qualquer tela pode abrir a captura (ex.: "Falar uma atualização" dentro do projeto).
+  useEffect(() => {
+    const onOpen = (e: Event) => { setCaptureCtx((e as CustomEvent).detail ?? null); setCaptureOpen(true); };
+    window.addEventListener("sdb:capture", onOpen);
+    return () => window.removeEventListener("sdb:capture", onOpen);
+  }, []);
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const wide = path === "/hoje";
@@ -82,8 +89,8 @@ export function Shell({ children, noticeCount, inboxCount, name, dayState }: {
             <Search size={16} /> Buscar no seu brain (projetos, ideias, decisões, notas)
             <kbd className="ml-auto rounded border border-line px-1.5 font-mono text-[10px]">⌘K</kbd>
           </button>
-          <button onClick={() => setCaptureOpen(true)} className="ml-auto flex h-10 items-center gap-2 rounded-lg bg-accent px-3.5 text-sm font-medium text-accent-fg hover:bg-accent-hover">
-            <Plus size={16} /> Capturar
+          <button onClick={() => { setCaptureCtx(null); setCaptureOpen(true); }} className="ml-auto flex h-10 items-center gap-2 rounded-lg bg-accent px-3.5 text-sm font-medium text-accent-fg hover:bg-accent-hover">
+            <Mic size={16} /> Falar ou escrever
           </button>
           <Link aria-label="Notificações" href="/notificacoes" className="relative grid h-10 w-10 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink">
             <Bell size={19} />
@@ -115,9 +122,9 @@ export function Shell({ children, noticeCount, inboxCount, name, dayState }: {
         <div className="grid h-16 grid-cols-5 items-center">
           {MOBILE_TABS.slice(0, 2).map((href) => <Tab key={href} href={href} active={isActive(path, href)} />)}
           <div className="flex justify-center">
-            <button aria-label="Capturar" onClick={() => setCaptureOpen(true)}
+            <button aria-label="Falar ou escrever" onClick={() => { setCaptureCtx(null); setCaptureOpen(true); }}
               className="grid h-14 w-14 -translate-y-2 place-items-center rounded-full bg-accent text-accent-fg shadow-[0_6px_20px_rgba(232,48,42,0.35)] transition-transform active:scale-95">
-              <Plus size={28} />
+              <Mic size={26} />
             </button>
           </div>
           {MOBILE_TABS.slice(2).map((href) => <Tab key={href} href={href} active={isActive(path, href)} />)}
@@ -152,7 +159,7 @@ export function Shell({ children, noticeCount, inboxCount, name, dayState }: {
         </div>
       ) : null}
 
-      <QuickCapture open={captureOpen} onClose={() => setCaptureOpen(false)} />
+      <CaptureSheet open={captureOpen} onClose={() => setCaptureOpen(false)} context={captureCtx} />
       <OfflineSync />
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
     </div>

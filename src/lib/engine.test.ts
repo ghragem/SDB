@@ -145,3 +145,17 @@ test("próximas ações: no máximo 3; sobrevivência reduz escopo", () => {
   assert.ok(semAcao[1].define);
   assert.equal(semAcao.length, 3);
 });
+
+test("cruzamentos: check-in sem update, gasto sem projeto, receita sem custo", () => {
+  const a = proj({ id: "a", name: "AutoFlow", priority: 1, next_action: "Ligar para 3 oficinas hoje", last_progress_at: "2026-10-19T12:00:00Z" });
+  const ranked = rankProjects([a], new Map(), TODAY, null);
+  const alerts = computeAlerts({
+    today: TODAY, state: null, ranked, ideasLast7d: [], decisions: [], risks: [],
+    checks: { claims: [{ projectId: "a", name: "AutoFlow", day: TODAY }], looseSpend: { count: 2, total: 170 }, revenueNoCost: [{ id: "a", name: "AutoFlow", revenue: 500 }], ideasWhileBusy: 0 },
+  });
+  const texts = alerts.map((x) => x.text);
+  assert.ok(texts.includes("Você disse no check-in que avançou o AutoFlow, mas não existe atualização registrada. Registrar agora?"));
+  assert.ok(texts.some((t) => t.startsWith("2 gastos sem projeto nos últimos 30 dias")));
+  assert.ok(texts.some((t) => t.startsWith("AutoFlow tem R$")));
+  assert.equal(alerts[0].key, "claim-a-2026-10-20");
+});
