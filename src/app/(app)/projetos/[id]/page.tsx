@@ -123,9 +123,11 @@ export default async function ProjetoPage({ params }: PageProps<"/projetos/[id]"
         <form action={addUpdate} className="space-y-2">
           <input type="hidden" name="project_id" value={p.id} />
           <div className="flex gap-2">
-            <Select name="kind" defaultValue="avanco" className="w-36 shrink-0" aria-label="Tipo">
-              {Object.entries(UPDATE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </Select>
+            <div className="w-36 shrink-0">
+              <Select name="kind" defaultValue="avanco" aria-label="Tipo">
+                {Object.entries(UPDATE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </Select>
+            </div>
             <input name="body" required placeholder="Fato, não intenção." aria-label="Texto"
               className="h-11 min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 placeholder:text-faint focus:border-line-strong focus:outline-none" />
           </div>

@@ -10,11 +10,14 @@ import { saveDaily } from "./actions";
 
 export const metadata: Metadata = { title: "Review" };
 
+const CAT: Record<string, string> = { servicos: "serviços", alimentacao: "alimentação", patrimonio: "patrimônio", ads: "anúncios" };
+const NOTE: Record<string, string> = { aprendizado: "Aprendizado", erro: "Erro", hipotese: "Hipótese", decisao: "Decisão", insight: "Insight" };
+
 export default async function ReviewPage() {
   const { supabase } = await requireUser();
   const today = todaySP();
   const since = new Date(`${today}T00:00:00-03:00`).toISOString();
-  const [review, history, progress, money, decisions, lessons, ideas, checkin, op] = await Promise.all([
+  const [review, history, progress, money, decisions, lessons, ideas, checkin, op, notes] = await Promise.all([
     supabase.from("daily_reviews").select("*").eq("day", today).maybeSingle(),
     supabase.from("daily_reviews").select("*").lt("day", today).gte("day", addDays(today, -14)).order("day", { ascending: false }),
     supabase.from("project_updates").select("id, body, kind, projects(name)").eq("is_progress", true).gte("created_at", since).order("created_at"),
@@ -24,6 +27,7 @@ export default async function ReviewPage() {
     supabase.from("ideas").select("title").gte("created_at", since),
     supabase.from("daily_checkins").select("energy, focus, pressure, day_state").eq("day", today).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     loadOperational(),
+    supabase.from("brain_notes").select("kind, title, body").in("kind", ["aprendizado", "erro", "hipotese", "decisao", "insight"]).gte("created_at", since),
   ]);
   const done = (progress.data ?? []) as unknown as { id: string; body: string; kind: string; projects: { name: string } | null }[];
   const tx = (money.data ?? []) as unknown as { type: string; amount: number; category: string; projects: { name: string } | null }[];
@@ -34,15 +38,17 @@ export default async function ReviewPage() {
   const projectsMoved = [...new Set(done.map((u) => u.projects?.name).filter(Boolean))] as string[];
   if (checkin.data) known.push(`Check-in: ${checkin.data.day_state ? DAY_STATE_LABEL[checkin.data.day_state as DayState] : "sem modo"}${checkin.data.energy ? ` (energia ${checkin.data.energy}, foco ${checkin.data.focus}, pressão ${checkin.data.pressure})` : ""}.`);
   for (const u of done) known.push(`${u.projects?.name ?? "Projeto"}: ${u.kind === "validacao" ? "evidência — " : ""}${u.body}`);
-  for (const t of tx) known.push(`${t.type === "receita" ? "Receita" : "Gasto"} ${fmtMoney(Number(t.amount))} em ${t.category}${t.projects?.name ? ` (${t.projects.name})` : " (sem projeto)"}.`);
+  for (const t of tx) known.push(`${t.type === "receita" ? "Receita" : "Gasto"} ${fmtMoney(Number(t.amount))} em ${CAT[t.category] ?? t.category}${t.projects?.name ? ` (${t.projects.name})` : " (sem projeto)"}.`);
+  for (const n of notes.data ?? []) known.push(`${NOTE[n.kind] ?? "Nota"}: ${n.title ? `${n.title} — ` : ""}${n.body.slice(0, 140)}`);
   for (const d of decisions.data ?? []) known.push(`Decisão: ${d.title}${d.verdict ? ` → ${d.verdict.replace("_", " ")}` : ""}.`);
   for (const l of lessons.data ?? []) known.push(`Estudo: ${(l.data as { slug?: string }).slug?.replace(/-/g, " ") ?? "aula"}.`);
   for (const i of ideas.data ?? []) known.push(`Ideia nova: ${i.title}.`);
 
   const spent = tx.filter((t) => t.type !== "receita");
+  const catLabel = (c: string) => CAT[c] ?? c;
   const context = [
     projectsMoved.length ? `avançou ${projectsMoved.join(" e ")}` : null,
-    spent.length ? `registrou ${fmtMoney(spent.reduce((a, t) => a + Number(t.amount), 0))} em ${[...new Set(spent.map((t) => t.category))].join(", ")}` : null,
+    spent.length ? `registrou ${fmtMoney(spent.reduce((a, t) => a + Number(t.amount), 0))} em ${[...new Set(spent.map((t) => catLabel(t.category)))].join(", ")}` : null,
   ].filter(Boolean).join(" e ");
   const autoAdvanced = done.map((u) => `${u.projects?.name ? `${u.projects.name}: ` : ""}${u.body}`).join("; ");
   const openDecisions = op.queue.map((q) => q.d.title);
